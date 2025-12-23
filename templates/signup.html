@@ -1,0 +1,54 @@
+<!-- templates/signup.html -->
+{% extends "base.html" %}
+{% block title %}Sign Up{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-body p-5">
+        <h2 class="card-title text-center mb-4">Student Signup</h2>
+        <p class="text-center text-muted mb-4">Create your account to start taking exams.</p>
+
+        <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="mb-3">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-control", placeholder="Enter your username") }}
+                {% if form.username.errors %}
+                    <div class="text-danger small mt-1">{{ form.username.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <div class="mb-3">
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-control", placeholder="Enter your email") }}
+                {% if form.email.errors %}
+                    <div class="text-danger small mt-1">{{ form.email.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <div class="mb-3">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-control", placeholder="Create a strong password") }}
+                {% if form.password.errors %}
+                    <div class="text-danger small mt-1">{{ form.password.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            <div class="mb-4">
+                {{ form.confirm_password.label(class="form-label") }}
+                {{ form.confirm_password(class="form-control", placeholder="Confirm your password") }}
+                {% if form.confirm_password.errors %}
+                    <div class="text-danger small mt-1">{{ form.confirm_password.errors[0] }}</div>
+                {% endif %}
+            </div>
+
+            {{ form.submit(class="btn btn-primary w-100") }}
+        </form>
+
+        <p class="text-center mt-4 text-muted">
+            Already have an account? <a href="{{ url_for('login') }}">Login here</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

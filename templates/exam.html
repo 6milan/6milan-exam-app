@@ -1,0 +1,36 @@
+<!-- templates/exam.html -->
+{% extends 'base.html' %}
+{% block title %}{{ category }} Exam{% endblock %}
+
+{% block content %}
+<div class="exam-container card shadow p-4">
+    <h2 class="card-title text-center mb-3">{{ category }} Exam</h2>
+    <p class="text-center mb-2"><strong>Time to test your knowledge!</strong> Answer all questions below.</p>
+    <p class="text-center text-muted mb-4"><em>20 Multiple Choice Questions • Score will be shown after submission</em></p>
+
+    <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        {% for field in form if field.name not in ['csrf_token', 'submit'] %}
+            <div class="question-card mb-3">
+                <p class="question-text">{{ field.label }}</p>
+                <div class="options">
+                    {% for subfield in field %}
+                        <div class="form-check">
+                            {{ subfield(class="form-check-input") }}
+                            {{ subfield.label(class="form-check-label") }}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if field.errors %}
+                    <span class="text-danger small">Please select an answer.</span>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <div class="submit-section text-center mt-4">
+            {{ form.submit(class="btn btn-primary btn-lg w-100") }}
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+<!-- templates/admin_profile.html -->
+{% extends "base.html" %}
+{% block title %}Admin Profile{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-body p-5 text-center">
+        <h2 class="mb-4">Admin Profile</h2>
+
+        <div class="mb-4">
+            <img src="{{ url_for('uploaded_file', filename=current_user.profile_pic or 'default.jpg') }}" 
+                 alt="Admin Profile Picture"
+                 class="rounded-circle mb-3 shadow"
+                 style="width: 200px; height: 200px; object-fit: cover; border: 5px solid #4f46e5;">
+            <h4 class="mb-1">{{ current_user.username }}</h4>
+            <p class="text-muted">{{ current_user.email }} <span class="badge bg-danger ms-2">ADMIN</span></p>
+        </div>
+
+        {% if upload_message %}
+            <div class="alert alert-success mb-4">{{ upload_message }}</div>
+        {% endif %}
+
+        <!-- Admin-Specific Upload Form -->
+        <form method="POST" enctype="multipart/form-data" class="mb-4">
+            <div class="d-grid gap-2">
+                <label class="btn btn-outline-primary btn-lg">
+                    Choose New Profile Picture
+                    <input type="file" name="upload_pic" accept="image/*" style="display: none;">
+                </label>
+                <button type="submit" class="btn btn-primary btn-lg">Upload Picture</button>
+            </div>
+            <small class="text-muted d-block mt-2">Max 5MB • JPG, PNG, GIF, WebP</small>
+        </form>
+
+        <hr>
+
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary btn-lg w-100">
+            Back to Admin Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

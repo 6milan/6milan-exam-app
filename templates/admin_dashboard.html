@@ -1,0 +1,110 @@
+<!-- templates/admin_dashboard.html -->
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard card shadow p-4">
+    <h2 class="mb-3">Admin Dashboard</h2>
+    <p class="subtitle mb-4">Manage student accounts and monitor their progress.</p>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">Admin Dashboard</h2>
+        <p class="text-muted mb-0">Welcome back, {{ current_user.username }}</p>
+    </div>
+    <div>
+        <a href="{{ url_for('admin_profile') }}" class="btn btn-outline-primary">
+            <img src="{{ url_for('uploaded_file', filename=current_user.profile_pic or 'default.jpg') }}" 
+                 class="rounded-circle me-2"
+                 style="width: 40px; height: 40px; object-fit: cover;">
+            Update Profile Picture
+        </a>
+    </div>
+</div>
+
+    <!-- Pending Approvals Section -->
+    <div class="card mb-4 p-3">
+        <h3>Pending Student Approvals 
+            <span class="badge bg-primary">{{ pending_users|length }}</span>
+        </h3>
+
+        {% if pending_users %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mt-3">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in pending_users %}
+                        <tr>
+                            <td><strong>{{ user.username }}</strong></td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                <form method="POST" style="display:inline;">
+                                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                                    <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">
+                                        Approve
+                                    </button>
+                                    <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">
+                                        Reject
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="empty-state mt-3">No pending approvals at this time. 🎉</p>
+        {% endif %}
+    </div>
+
+    <!-- Approved Students Progress Section -->
+    <div class="card p-3">
+        <h3>Student Exam Progress</h3>
+
+        {% if user_scores %}
+            {% for user in all_users %}
+                {% set scores = user_scores[user.id] %}
+                <div class="student-progress mb-4">
+                    <div class="student-header mb-2">
+                        <h4>{{ user.username }} <small>({{ user.email }})</small></h4>
+                        <span class="badge bg-info text-dark">{{ scores|length }} exam{{ 's' if scores|length != 1 else '' }} completed</span>
+                    </div>
+
+                    {% if scores %}
+                        <ul class="score-list list-unstyled">
+                            {% for score in scores %}
+                            <li class="d-flex justify-content-between align-items-center">
+                                <span class="category-badge">{{ score.category }}</span>
+                                <strong>{{ score.score }}/20</strong>
+                                <span class="date">{{ score.date.strftime('%b %d, %Y') }}</span>
+                                {% if score.score >= 16 %}
+                                    <span class="performance excellent">Excellent!</span>
+                                {% elif score.score >= 12 %}
+                                    <span class="performance good">Good</span>
+                                {% elif score.score >= 8 %}
+                                    <span class="performance average">Fair</span>
+                                {% else %}
+                                    <span class="performance poor">Needs Improvement</span>
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="empty-state mt-2">No exams taken yet.</p>
+                    {% endif %}
+                </div>
+                {% if not loop.last %}<hr class="divider">{% endif %}
+            {% endfor %}
+        {% else %}
+            <p class="empty-state mt-3">No approved students yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

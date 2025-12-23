@@ -1,0 +1,9 @@
+.env
+site.db
+__pycache__/
+*.pyc
+venv/
+.venv/
+.DS_Store
+uploads/*
+!uploads/default.jpg
