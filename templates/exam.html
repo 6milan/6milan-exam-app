@@ -1,36 +1,99 @@
 <!-- templates/exam.html -->
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block title %}{{ category }} Exam{% endblock %}
 
 {% block content %}
-<div class="exam-container card shadow p-4">
-    <h2 class="card-title text-center mb-3">{{ category }} Exam</h2>
-    <p class="text-center mb-2"><strong>Time to test your knowledge!</strong> Answer all questions below.</p>
-    <p class="text-center text-muted mb-4"><em>20 Multiple Choice Questions • Score will be shown after submission</em></p>
+<div class="card shadow">
+    <!-- Timer Header with Progress Bar -->
+    <div class="card-header bg-primary text-white position-relative overflow-hidden">
+        <!-- Animated Progress Bar -->
+        <div id="timer-bar" class="position-absolute top-0 start-0 h-100" 
+             style="width: 100%; background-color: #28a745; transition: width 1s linear, background-color 0.5s;"></div>
 
-    <form method="POST" novalidate>
-        {{ form.hidden_tag() }}
-
-        {% for field in form if field.name not in ['csrf_token', 'submit'] %}
-            <div class="question-card mb-3">
-                <p class="question-text">{{ field.label }}</p>
-                <div class="options">
-                    {% for subfield in field %}
-                        <div class="form-check">
-                            {{ subfield(class="form-check-input") }}
-                            {{ subfield.label(class="form-check-label") }}
-                        </div>
-                    {% endfor %}
-                </div>
-                {% if field.errors %}
-                    <span class="text-danger small">Please select an answer.</span>
-                {% endif %}
+        <div class="position-relative d-flex justify-content-between align-items-center py-3">
+            <h3 class="mb-0">{{ category }} Exam</h3>
+            <div class="text-end">
+                <h4 id="timer" class="mb-0">
+                    Time Remaining: <span id="time-display" class="fw-bold">00:00</span>
+                </h4>
+                <small>{{ num_questions }} questions • 1 minute per question • Total: {{ total_time_seconds // 60 }} minute{{ 's' if (total_time_seconds // 60) != 1 else '' }}</small>
             </div>
-        {% endfor %}
-
-        <div class="submit-section text-center mt-4">
-            {{ form.submit(class="btn btn-primary btn-lg w-100") }}
         </div>
-    </form>
+    </div>
+
+    <div class="card-body p-5">
+        <p class="text-center lead mb-5">
+            <strong>Answer carefully!</strong> The exam will auto-submit when time ends.
+        </p>
+
+        <form id="exam-form" method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            {% for field in form if field.name not in ['csrf_token', 'submit'] %}
+                <div class="question-card mb-5 p-4 border rounded bg-light">
+                    <p class="question-text fs-5 fw-bold mb-4">{{ field.label.text }}</p>
+                    <div class="options">
+                        {% for subfield in field %}
+                            <div class="form-check form-check-inline mb-3">
+                                {{ subfield(class="form-check-input") }}
+                                {{ subfield.label(class="form-check-label fs-6") }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% if field.errors %}
+                        <div class="text-danger small mt-2">{{ field.errors[0] }}</div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <div class="text-center mt-5">
+                {{ form.submit(class="btn btn-success btn-lg px-5") }}
+            </div>
+        </form>
+    </div>
 </div>
+
+<!-- Timer & Progress Bar Script -->
+<script>
+    const totalSeconds = {{ total_time_seconds }};
+    let timeLeft = totalSeconds;
+
+    const timerDisplay = document.getElementById('time-display');
+    const timerBar = document.getElementById('timer-bar');
+    const examForm = document.getElementById('exam-form');
+
+    function updateTimer() {
+        if (timeLeft <= 0) {
+            timerDisplay.textContent = "00:00";
+            timerBar.style.width = "0%";
+            timerBar.style.backgroundColor = "#dc3545";
+            alert("Time's up! Your exam has been automatically submitted.");
+            examForm.submit();
+            return;
+        }
+
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+        // Update progress bar width
+        const percentage = (timeLeft / totalSeconds) * 100;
+        timerBar.style.width = `${percentage}%`;
+
+        // Color change based on time left
+        if (percentage > 50) {
+            timerBar.style.backgroundColor = '#28a745'; // Green
+        } else if (percentage > 20) {
+            timerBar.style.backgroundColor = '#ffc107'; // Yellow
+        } else {
+            timerBar.style.backgroundColor = '#dc3545'; // Red
+        }
+
+        timeLeft--;
+        setTimeout(updateTimer, 1000);
+    }
+
+    // Start timer on page load
+    updateTimer();
+</script>
 {% endblock %}

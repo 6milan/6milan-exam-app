@@ -8,7 +8,8 @@
         <h2 class="mb-4">Admin Profile</h2>
 
         <div class="mb-4">
-            <img src="{{ url_for('uploaded_file', filename=current_user.profile_pic or 'default.jpg') }}" 
+            <!-- Direct public URL from Supabase Storage -->
+            <img src="{{ current_user.profile_pic or 'https://mrtwhvcfevspfpotjzti.supabase.co/storage/v1/object/public/6milan-exam-app/default.jpg' }}" 
                  alt="Admin Profile Picture"
                  class="rounded-circle mb-3 shadow"
                  style="width: 200px; height: 200px; object-fit: cover; border: 5px solid #4f46e5;">
@@ -20,7 +21,7 @@
             <div class="alert alert-success mb-4">{{ upload_message }}</div>
         {% endif %}
 
-        <!-- Admin-Specific Upload Form -->
+        <!-- Upload Form -->
         <form method="POST" enctype="multipart/form-data" class="mb-4">
             <div class="d-grid gap-2">
                 <label class="btn btn-outline-primary btn-lg">

@@ -5,44 +5,158 @@
 {% block content %}
 <div class="card shadow">
     <div class="card-body p-5">
-        <div class="text-center mb-4">
-            <img src="{{ url_for('uploaded_file', filename=current_user.profile_pic) }}" 
+
+        <!-- Profile Header -->
+        <div class="text-center mb-5">
+            <!-- Direct URL from Supabase Storage -->
+            <img src="{{ current_user.profile_pic or 'https://mrtwhvcfevspfpotjzti.supabase.co/storage/v1/object/public/6milan-exam-app/default.jpg' }}" 
                  alt="Profile Picture" 
-                 class="rounded-circle mb-3" 
-                 style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #4f46e5;">
-            <h3>{{ current_user.username }}</h3>
-            <p class="text-muted">{{ current_user.email }}</p>
+                 class="rounded-circle mb-4 shadow"
+                 style="width: 160px; height: 160px; object-fit: cover; border: 5px solid #4f46e5;">
+            <h3 class="mb-2">{{ current_user.username }}</h3>
+            <p class="text-muted mb-0">{{ current_user.email }}</p>
+
             {% if upload_message %}
-                <div class="alert alert-success">{{ upload_message }}</div>
+                <div class="alert alert-success mt-4">{{ upload_message }}</div>
             {% endif %}
         </div>
 
         <!-- Upload Form -->
-        <form method="POST" enctype="multipart/form-data" class="mb-4">
-            <div class="input-group">
-                <input type="file" name="upload_pic" class="form-control" accept="image/*">
-                <button type="submit" class="btn btn-outline-primary">Upload Picture</button>
-            </div>
-            <small class="text-muted">Max 5MB: JPG, PNG, GIF, WebP</small>
-        </form>
-
-        <hr>
-
-        <h4 class="mb-3 text-center">Select Exam Category</h4>
-        <form method="POST">
-            {{ form.hidden_tag() }}
-            <div class="input-group mb-4">
-                {{ form.category(class="form-select") }}
-                {{ form.submit(class="btn btn-primary") }}
-            </div>
-        </form>
-
-        <h4 class="mb-3 text-center">Your Track Records</h4>
-        <div style="height: 350px;">
-            <canvas id="scoreChart"
-                    data-labels='{{ chart_data.labels | tojson }}'
-                    data-scores='{{ chart_data.data | tojson }}'></canvas>
+        <div class="text-center mb-5">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="input-group justify-content-center" style="max-width: 500px; margin: 0 auto;">
+                    <input type="file" name="upload_pic" class="form-control" accept="image/*" required>
+                    <button type="submit" class="btn btn-outline-primary">Upload Picture</button>
+                </div>
+                <small class="text-muted d-block mt-2">Max 5MB • JPG, PNG, GIF, WebP</small>
+            </form>
         </div>
+
+        <hr class="my-5">
+
+        <!-- Overall Performance Summary (Top) -->
+        <div class="bg-light rounded p-4 text-center border mb-5">
+            <h4 class="mb-3">Overall Performance Summary</h4>
+            <h2 class="display-5 fw-bold text-primary mb-2">
+                {{ total_score }} / {{ total_exams * 20 }}
+            </h2>
+            <p class="lead fw-bold text-success mb-2">{{ remark }}</p>
+            <small class="text-muted">
+                Based on {{ total_exams }} exam{{ 's' if total_exams != 1 else '' }} completed
+            </small>
+        </div>
+
+        <!-- Exam Category Selection -->
+        <div class="text-center mb-5">
+            <h4 class="mb-4">Select Exam Category</h4>
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="input-group justify-content-center" style="max-width: 600px; margin: 0 auto;">
+                    {{ form.category(class="form-select") }}
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+
+        <!-- Personal Analytics Charts (Bottom) -->
+        <h4 class="text-center mb-4">Your Performance Analytics</h4>
+        <div class="row g-4 mb-5">
+            <!-- Bar Chart: Average Score by Category -->
+            <div class="col-md-6">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-center mb-4">Average Score by Category</h5>
+                        <canvas id="categoryChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Line Chart: Score Trend Over Time -->
+            <div class="col-md-6">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-center mb-4">Your Score Trend Over Time</h5>
+                        <canvas id="trendChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Track Record Chart -->
+        <div class="text-center">
+            <h4 class="mb-4">Your Detailed Track Records</h4>
+            <div style="height: 350px; position: relative;">
+                <canvas id="scoreChart"
+                        data-labels='{{ chart_data.labels | tojson }}'
+                        data-scores='{{ chart_data.data | tojson }}'></canvas>
+            </div>
+        </div>
+
     </div>
 </div>
+
+<!-- Chart.js + Student Charts Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Bar Chart: Average Score by Category
+new Chart(document.getElementById('categoryChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ avg_category_data.keys() | list | tojson }},
+        datasets: [{
+            label: 'Your Average',
+            data: {{ avg_category_data.values() | list | tojson }},
+            backgroundColor: 'rgba(79, 70, 229, 0.7)',
+            borderColor: '#4f46e5',
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, max: 20, ticks: { stepSize: 2 } } }
+    }
+});
+
+// Line Chart: Score Trend
+new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+        labels: {{ chart_data.labels | tojson }},
+        datasets: [{
+            label: 'Your Scores',
+            data: {{ chart_data.data | tojson }},
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 5
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true, max: 20, ticks: { stepSize: 2 } } }
+    }
+});
+
+// Detailed Track Record Chart
+new Chart(document.getElementById('scoreChart'), {
+    type: 'line',
+    data: {
+        labels: {{ chart_data.labels | tojson }},
+        datasets: [{
+            label: 'Exam Scores',
+            data: {{ chart_data.data | tojson }},
+            borderColor: '#4f46e5',
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            tension: 0.3,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true, max: 20 } }
+    }
+});
+</script>
 {% endblock %}
