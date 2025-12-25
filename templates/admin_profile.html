@@ -7,11 +7,11 @@
     <div class="card-body p-5 text-center">
         <h2 class="mb-4">Admin Profile</h2>
 
-        <div class="mb-4">
-            <!-- Direct public URL from Supabase Storage -->
+        <div class="mb-5">
+            <!-- Direct Supabase URL -->
             <img src="{{ current_user.profile_pic or 'https://mrtwhvcfevspfpotjzti.supabase.co/storage/v1/object/public/6milan-exam-app/default.jpg' }}" 
                  alt="Admin Profile Picture"
-                 class="rounded-circle mb-3 shadow"
+                 class="rounded-circle mb-4 shadow"
                  style="width: 200px; height: 200px; object-fit: cover; border: 5px solid #4f46e5;">
             <h4 class="mb-1">{{ current_user.username }}</h4>
             <p class="text-muted">{{ current_user.email }} <span class="badge bg-danger ms-2">ADMIN</span></p>
@@ -22,7 +22,7 @@
         {% endif %}
 
         <!-- Upload Form -->
-        <form method="POST" enctype="multipart/form-data" class="mb-4">
+        <form method="POST" enctype="multipart/form-data" class="mb-5">
             <div class="d-grid gap-2">
                 <label class="btn btn-outline-primary btn-lg">
                     Choose New Profile Picture
@@ -33,7 +33,7 @@
             <small class="text-muted d-block mt-2">Max 5MB • JPG, PNG, GIF, WebP</small>
         </form>
 
-        <hr>
+        <hr class="my-5">
 
         <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary btn-lg w-100">
             Back to Admin Dashboard

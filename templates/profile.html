@@ -8,7 +8,7 @@
 
         <!-- Profile Header -->
         <div class="text-center mb-5">
-            <!-- Direct URL from Supabase Storage -->
+            <!-- Correct bucket: 6milan-exam-app -->
             <img src="{{ current_user.profile_pic or 'https://mrtwhvcfevspfpotjzti.supabase.co/storage/v1/object/public/6milan-exam-app/default.jpg' }}" 
                  alt="Profile Picture" 
                  class="rounded-circle mb-4 shadow"
@@ -25,7 +25,7 @@
         <div class="text-center mb-5">
             <form method="POST" enctype="multipart/form-data">
                 <div class="input-group justify-content-center" style="max-width: 500px; margin: 0 auto;">
-                    <input type="file" name="upload_pic" class="form-control" accept="image/*" required>
+                    <input type="file" name="upload_pic" class="form-control" accept="image/*">
                     <button type="submit" class="btn btn-outline-primary">Upload Picture</button>
                 </div>
                 <small class="text-muted d-block mt-2">Max 5MB • JPG, PNG, GIF, WebP</small>
@@ -34,7 +34,7 @@
 
         <hr class="my-5">
 
-        <!-- Overall Performance Summary (Top) -->
+        <!-- Overall Performance Summary -->
         <div class="bg-light rounded p-4 text-center border mb-5">
             <h4 class="mb-3">Overall Performance Summary</h4>
             <h2 class="display-5 fw-bold text-primary mb-2">
@@ -58,10 +58,9 @@
             </form>
         </div>
 
-        <!-- Personal Analytics Charts (Bottom) -->
+        <!-- Personal Analytics Charts -->
         <h4 class="text-center mb-4">Your Performance Analytics</h4>
         <div class="row g-4 mb-5">
-            <!-- Bar Chart: Average Score by Category -->
             <div class="col-md-6">
                 <div class="card h-100 shadow-sm">
                     <div class="card-body">
@@ -70,8 +69,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Line Chart: Score Trend Over Time -->
             <div class="col-md-6">
                 <div class="card h-100 shadow-sm">
                     <div class="card-body">

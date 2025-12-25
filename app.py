@@ -29,7 +29,7 @@ serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 supabase: Client = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_SERVICE_ROLE_KEY'])
 
 # Supabase Storage bucket
-SUPABASE_BUCKET = "6mila-exam-app"
+SUPABASE_BUCKET = "6milan-exam-app"
 
 db.init_app(app)
 
@@ -63,19 +63,28 @@ def get_performance_remark(total_score, total_exams):
     else:
         return "Keep Practicing! 💪"
 
-# Supabase Storage upload function
 def upload_to_supabase(file, user_id, role):
-    if not file:
+    if not file or file.filename == '':
         return None
 
+    # Read file bytes
+    file_bytes = file.read()
+    if len(file_bytes) == 0:
+        return None
+
+    # Get extension
     ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
     filename = f"{role}_{user_id}_{uuid.uuid4().hex}.{ext}"
 
     try:
+        # Use file_bytes directly and pass upsert as part of file_options
         supabase.storage.from_(SUPABASE_BUCKET).upload(
             path=filename,
-            file=file,
-            file_options={"content-type": file.content_type}
+            file=file_bytes,
+            file_options={
+                "content-type": file.content_type or "image/jpeg",
+                "upsert": "true"  # Must be string "true", not bool True
+            }
         )
         public_url = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(filename)
         return public_url
