@@ -1,10 +1,27 @@
 // static/js/scripts.js
 
 document.addEventListener('DOMContentLoaded', function () {
-    const chartCanvas = document.getElementById('scoreChart');
+    // === Password Show/Hide Checkbox Toggles (Global) ===
+    // This handles ALL password fields with "Show" checkboxes across login, signup, and reset pages
+    const togglePasswordCheckboxes = document.querySelectorAll('.form-check-input[type="checkbox"]');
+    
+    togglePasswordCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function () {
+            // Find the nearest password input within the same input-group
+            const inputGroup = this.closest('.input-group');
+            if (!inputGroup) return;
+            
+            const passwordField = inputGroup.querySelector('input[type="password"], input[type="text"]');
+            if (passwordField) {
+                passwordField.type = this.checked ? 'text' : 'password';
+            }
+        });
+    });
 
+    // === Score Progress Chart (Student Profile Page) ===
+    const chartCanvas = document.getElementById('scoreChart');
     if (!chartCanvas) {
-        return; // Not on profile page
+        return; // Not on a page with the chart
     }
 
     // Show loading message
@@ -14,7 +31,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Parse data safely
     let labels = [];
     let scores = [];
-
     try {
         labels = JSON.parse(chartCanvas.dataset.labels || '[]');
         scores = JSON.parse(chartCanvas.dataset.scores || '[]');
@@ -36,19 +52,20 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
-    // Determine max score (default 20, but flexible if you change question count)
+    // Determine max score (default 20, but flexible)
     const maxScore = Math.max(...scores, 20);
 
-    // Restore canvas and create chart
+    // Restore canvas
     container.innerHTML = '<canvas id="scoreChart"></canvas>';
     const canvas = document.getElementById('scoreChart');
 
-    // Generate gradient for modern look
+    // Generate gradient
     const ctx = canvas.getContext('2d');
     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
     gradient.addColorStop(0, 'rgba(79, 70, 229, 0.3)');
     gradient.addColorStop(1, 'rgba(79, 70, 229, 0.05)');
 
+    // Create Chart.js chart
     new Chart(canvas, {
         type: 'line',
         data: {
@@ -119,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function () {
             scales: {
                 y: {
                     beginAtZero: true,
-                    max: maxScore + 2, // Slight padding above max
+                    max: maxScore + 2,
                     grid: {
                         color: 'rgba(148, 163, 184, 0.2)',
                         drawBorder: false
@@ -163,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Optional: Add a subtle celebration when score improves
+    // Subtle celebration on score improvement
     if (scores.length >= 2 && scores[scores.length - 1] > scores[scores.length - 2]) {
         setTimeout(() => {
             container.style.boxShadow = '0 0 20px rgba(79, 70, 229, 0.4)';

@@ -1,11 +1,15 @@
 /* static/css/style.css */
 
+/* Global Styles */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #f4f6f9;
     color: #333;
     margin: 0;
     padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 header {
@@ -30,12 +34,13 @@ header a {
 }
 
 main {
+    flex: 1;
     max-width: 800px;
     margin: 40px auto;
     padding: 20px;
 }
 
-.form-container, .dashboard, .exam-container {
+.form-container, .dashboard, .exam-container, .card {
     background: white;
     padding: 40px;
     border-radius: 12px;
@@ -53,10 +58,6 @@ p {
     color: #64748b;
 }
 
-.form-group {
-    margin-bottom: 20px;
-}
-
 .form-label {
     display: block;
     margin-bottom: 8px;
@@ -70,7 +71,7 @@ p {
     border: 2px solid #e2e8f0;
     border-radius: 8px;
     font-size: 16px;
-    transition: border 0.3s;
+    transition: border 0.3s, box-shadow 0.3s;
 }
 
 .form-control:focus {
@@ -176,8 +177,7 @@ p {
     text-decoration: underline;
 }
 
-/* Admin Dashboard Specific Styles */
-
+/* Admin Dashboard Styles */
 .subtitle {
     text-align: center;
     color: #64748b;
@@ -318,6 +318,48 @@ p {
     padding: 30px 0;
 }
 
+/* === Checkbox-based Password Show/Hide (Clean & Responsive) === */
+.input-group-text .form-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0 8px;
+}
+
+.input-group-text .form-check-input {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.input-group-text .form-check-label {
+    font-size: 0.875rem;
+    white-space: nowrap;
+    user-select: none;
+    color: #64748b;
+}
+
+/* Seamless attachment to input */
+.input-group > .form-control {
+    border-right: 0;
+}
+
+.input-group > .input-group-text {
+    background: #f8fafc;
+    border-left: 0;
+}
+
+/* Focus ring includes checkbox area */
+.input-group:focus-within .form-control,
+.input-group:focus-within .input-group-text {
+    border-color: #4f46e5;
+}
+
+.input-group:focus-within .input-group-text {
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+/* Responsive Adjustments */
 @media (max-width: 768px) {
     main {
         margin: 20px auto;
@@ -359,15 +401,6 @@ p {
         margin-right: 0;
     }
 
-    .admin-table {
-        font-size: 14px;
-    }
-
-    .admin-table th,
-    .admin-table td {
-        padding: 10px 8px;
-    }
-
     .student-header {
         flex-direction: column;
         align-items: flex-start;
@@ -382,49 +415,34 @@ p {
     .performance {
         align-self: flex-start;
     }
+
+    .input-group-text .form-check-label {
+        font-size: 0.8rem;
+    }
 }
 
 @media (max-width: 480px) {
-    header {
-        padding: 15px;
+    .input-group-text .form-check {
+        padding: 0 6px;
+        gap: 5px;
     }
 
-    header h1 {
-        font-size: 22px;
+    .input-group-text .form-check-label {
+        font-size: 0.75rem;
     }
 
-    .form-container, .dashboard, .exam-container, .card {
-        padding: 20px;
+    .input-group-text .form-check-input {
+        transform: scale(0.9);
+    }
+}
+
+@media (max-width: 360px) {
+    .input-group-text .form-check {
+        padding: 0 4px;
+        gap: 4px;
     }
 
-    h2 {
-        font-size: 22px;
-    }
-
-    .form-control {
-        font-size: 15px;
-        padding: 12px;
-    }
-
-    .question-text {
-        font-size: 16px;
-    }
-
-    .options label {
-        font-size: 15px;
-    }
-
-    .radio-option {
-        transform: scale(1.1);
-    }
-
-    .subtitle {
-        font-size: 16px;
-    }
-
-    .admin-table {
-        display: block;
-        overflow-x: auto;
-        white-space: nowrap;
+    .input-group-text .form-check-label {
+        font-size: 0.7rem;
     }
 }

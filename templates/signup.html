@@ -1,102 +1,82 @@
 <!-- templates/signup.html -->
 {% extends "base.html" %}
 {% block title %}Sign Up{% endblock %}
-
 {% block content %}
 <div class="card shadow">
     <div class="card-body p-5">
-        <h2 class="card-title text-center mb-4">Student Signup</h2>
+        <h2 class="text-center mb-4">Student Signup</h2>
         <p class="text-center text-muted mb-4">Create your account to start taking exams.</p>
-
         <form method="POST" novalidate>
             {{ form.hidden_tag() }}
-
             <!-- Username -->
             <div class="mb-3">
                 {{ form.username.label(class="form-label") }}
-                {{ form.username(class="form-control", placeholder="Enter your username") }}
+                {{ form.username(class="form-control", placeholder="Choose a username") }}
                 {% if form.username.errors %}
-                    <div class="text-danger small mt-1">{{ form.username.errors[0] }}</div>
+                    {% for error in form.username.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
                 {% endif %}
             </div>
-
             <!-- Email -->
             <div class="mb-3">
                 {{ form.email.label(class="form-label") }}
                 {{ form.email(class="form-control", placeholder="Enter your email") }}
                 {% if form.email.errors %}
-                    <div class="text-danger small mt-1">{{ form.email.errors[0] }}</div>
+                    {% for error in form.email.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
                 {% endif %}
             </div>
-
-            <!-- Password with Show/Hide -->
-            <div class="mb-3 position-relative">
+            <!-- Password -->
+            <div class="mb-3">
                 {{ form.password.label(class="form-label") }}
                 <div class="input-group">
-                    {{ form.password(class="form-control pe-5", placeholder="Create a strong password", id="password-field") }}
-                    <button type="button" class="btn btn-outline-secondary position-absolute end-0 top-50 translate-middle-y me-2" 
-                            id="toggle-password">
-                        👁️
-                    </button>
+                    {{ form.password(class="form-control", placeholder="Create a strong password", id="password-field-signup") }}
+                    <div class="input-group-text bg-white border-start-0">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="show-password-signup">
+                            <label class="form-check-label text-muted small" for="show-password-signup">
+                                Show
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 {% if form.password.errors %}
-                    <div class="text-danger small mt-1">{{ form.password.errors[0] }}</div>
+                    {% for error in form.password.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
                 {% endif %}
             </div>
-
-            <!-- Confirm Password with Show/Hide -->
-            <div class="mb-4 position-relative">
+            <!-- Confirm Password -->
+            <div class="mb-4">
                 {{ form.confirm_password.label(class="form-label") }}
                 <div class="input-group">
-                    {{ form.confirm_password(class="form-control pe-5", placeholder="Confirm your password", id="confirm-password-field") }}
-                    <button type="button" class="btn btn-outline-secondary position-absolute end-0 top-50 translate-middle-y me-2" 
-                            id="toggle-confirm-password">
-                        👁️
-                    </button>
+                    {{ form.confirm_password(class="form-control", placeholder="Confirm your password", id="confirm-password-field") }}
+                    <div class="input-group-text bg-white border-start-0">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="show-confirm-signup">
+                            <label class="form-check-label text-muted small" for="show-confirm-signup">
+                                Show
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 {% if form.confirm_password.errors %}
-                    <div class="text-danger small mt-1">{{ form.confirm_password.errors[0] }}</div>
+                    {% for error in form.confirm_password.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
                 {% endif %}
             </div>
-
             <!-- Submit -->
             <div class="d-grid mb-4">
                 {{ form.submit(class="btn btn-primary btn-lg") }}
             </div>
-
-            <!-- Forgot Password Link -->
-            <div class="text-center mb-3">
-                <a href="{{ url_for('forgot_password') }}" class="text-decoration-none small">
-                    Forgot your password?
-                </a>
-            </div>
+            <p class="text-center text-muted">
+                Already have an account?
+                <a href="{{ url_for('login') }}" class="text-primary fw-bold">Login here</a>
+            </p>
         </form>
-
-        <hr class="my-4">
-
-        <p class="text-center text-muted">
-            Already have an account? 
-            <a href="{{ url_for('login') }}" class="text-primary fw-bold">Login here</a>
-        </p>
     </div>
 </div>
-
-<!-- Show/Hide Password Script -->
-<script>
-    // Toggle for Password field
-    document.getElementById('toggle-password').addEventListener('click', function () {
-        const field = document.getElementById('password-field');
-        const type = field.getAttribute('type') === 'password' ? 'text' : 'password';
-        field.setAttribute('type', type);
-        this.textContent = type === 'password' ? '👁️' : '🙈';
-    });
-
-    // Toggle for Confirm Password field
-    document.getElementById('toggle-confirm-password').addEventListener('click', function () {
-        const field = document.getElementById('confirm-password-field');
-        const type = field.getAttribute('type') === 'password' ? 'text' : 'password';
-        field.setAttribute('type', type);
-        this.textContent = type === 'password' ? '👁️' : '🙈';
-    });
-</script>
 {% endblock %}
