@@ -1,20 +1,25 @@
 # app.py
-from flask import Flask, render_template, redirect, url_for, flash, request
+from flask import Flask, render_template, redirect, url_for, flash, request, session
 from flask_login import LoginManager, login_user, current_user, logout_user, login_required
 from config import Config
 from models import db, User, Score
 from forms import SignupForm, LoginForm, SelectCategoryForm
 from questions import questions
 from wtforms import RadioField, SubmitField
-from wtforms.validators import DataRequired, Length, Email, EqualTo
+from wtforms.validators import DataRequired
 from flask_wtf import FlaskForm
 from supabase import create_client, Client
 from datetime import datetime, timezone
-import uuid
 import os
+from sqlalchemy import func
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Register template helper for resized profile pictures
+@app.context_processor
+def utility_processor():
+    return dict(get_resized_profile_url=get_resized_profile_url)
 
 # Supabase client (using service role key for server-side operations)
 supabase: Client = create_client(
@@ -22,9 +27,11 @@ supabase: Client = create_client(
     app.config['SUPABASE_SERVICE_ROLE_KEY']
 )
 
-# Supabase Storage bucket
+# Supabase Storage configuration
 SUPABASE_BUCKET = "6milan-exam-app"
+SUPABASE_STORAGE_BASE_URL = f"{app.config['SUPABASE_URL'].rstrip('/')}/storage/v1/object/public/{SUPABASE_BUCKET}/"
 
+# Database and Login Manager setup
 db.init_app(app)
 
 login_manager = LoginManager(app)
@@ -57,29 +64,53 @@ def get_performance_remark(total_score, total_exams):
     else:
         return "Keep Practicing! 💪"
 
-# Supabase Storage upload function
-def upload_to_supabase(file, user_id, role):
+def upload_to_supabase(file, user_supabase_uid):
     if not file or file.filename == '':
         return None
-    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
-    filename = f"{role}_{user_id}_{uuid.uuid4().hex}.{ext}"
+
+    # Read bytes correctly
+    file.stream.seek(0)
+    file_bytes = file.read()
+
+    # Build storage path
+    ext = file.filename.rsplit('.', 1)[-1].lower()
+    path = f"{user_supabase_uid}/profile.{ext}"
+
     try:
         supabase.storage.from_(SUPABASE_BUCKET).upload(
-            path=filename,
-            file=file.read(),
-            file_options={"content-type": file.content_type or "image/jpeg", "upsert": True}
+            path=path,
+            file=file_bytes
         )
-        public_url = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(filename)
+
+        public_url = f"{SUPABASE_STORAGE_BASE_URL}{path}"
         return public_url
+
     except Exception as e:
-        print(f"Supabase upload error: {e}")
+        print("Supabase upload error:", e)
         return None
 
+
+# Profile picture resizing helper
+def get_resized_profile_url(profile_pic_url, width=None, height=None, quality=80):
+    if not profile_pic_url:
+        return None  # Template shows initials placeholder
+
+    params = []
+    if width:
+        params.append(f"width={width}")
+    if height:
+        params.append(f"height={height}")
+    params.append(f"quality={quality}")
+    params.append("resize=cover")
+
+    transform_str = "&".join(params)
+    return f"{profile_pic_url}?{transform_str}"
+
+# Routes
 @app.route('/')
 def index():
     return redirect(url_for('login'))
 
-# === SIGNUP (Traditional Password) ===
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if current_user.is_authenticated:
@@ -87,38 +118,43 @@ def signup():
 
     form = SignupForm()
     if form.validate_on_submit():
+        email = form.email.data.lower().strip()
+        username = form.username.data.strip()
+        password = form.password.data
+
         try:
-            # Create user in Supabase Auth with password
             response = supabase.auth.sign_up({
-                "email": form.email.data,
-                "password": form.password.data,
-                "options": {
-                    "data": {"username": form.username.data}
-                }
+                "email": email,
+                "password": password,
+                "options": {"data": {"username": username}}
             })
 
             if response.user:
-                # Create local User record
-                user = User(
-                    username=form.username.data,
-                    email=form.email.data.lower(),
+                supabase_uid = response.user.id
+                if User.query.filter_by(supabase_uid=supabase_uid).first():
+                    flash('You have already signed up. Please log in.', 'info')
+                    return redirect(url_for('login'))
+
+                new_user = User(
+                    supabase_uid=supabase_uid,
+                    username=username,
+                    email=email,
                     role='student',
-                    approved=False  # Waiting for admin approval
+                    approved=False,
+                    profile_pic=None
                 )
-                # Note: Password is stored in Supabase Auth, not locally
-                db.session.add(user)
+                db.session.add(new_user)
                 db.session.commit()
-                flash('Signup successful! Please wait for admin approval.', 'success')
+
+                flash('Signup successful! Your account is pending admin approval.', 'success')
                 return redirect(url_for('login'))
-            else:
-                flash('Signup failed. Please try again.', 'danger')
+
         except Exception as e:
-            print(e)
-            flash('Email already exists or invalid.', 'danger')
+            print("Signup error:", e)
+            flash('Signup failed. Please try again.', 'danger')
 
     return render_template('signup.html', form=form)
 
-# === LOGIN (Traditional Password with Supabase Auth) ===
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -126,38 +162,48 @@ def login():
 
     form = LoginForm()
     if form.validate_on_submit():
-        email = form.email.data.lower()
+        email = form.email.data.lower().strip()
         password = form.password.data
 
         try:
-            response = supabase.auth.sign_in_with_password({
-                "email": email,
-                "password": password
-            })
+            response = supabase.auth.sign_in_with_password({"email": email, "password": password})
 
-            if response.user:
-                user = User.query.filter_by(email=email).first()
-                if not user:
-                    # Rare case: create local record if missing
-                    user = User(
-                        email=email,
-                        username=email.split('@')[0],
-                        role='student',
-                        approved=True
-                    )
-                    db.session.add(user)
-                    db.session.commit()
+            if not response.user:
+                flash('Invalid email or password.', 'danger')
+                return render_template('login.html', form=form)
 
-                if user.role == 'student' and not user.approved:
-                    flash('Your account is pending admin approval.', 'warning')
-                    return redirect(url_for('login'))
+            supabase_uid = response.user.id
+            user = User.query.filter_by(supabase_uid=supabase_uid).first() or \
+                   User.query.filter_by(email=email).first()
 
-                login_user(user)
-                flash('Login successful!', 'success')
-                next_page = request.args.get('next')
-                return redirect(next_page or url_for('profile' if user.role == 'student' else 'admin_dashboard'))
+            if not user:
+                user = User(
+                    supabase_uid=supabase_uid,
+                    email=email,
+                    username=email.split('@')[0],
+                    role='student',
+                    approved=False,
+                    profile_pic=None
+                )
+                db.session.add(user)
+                db.session.commit()
+                flash('Account created! Please wait for admin approval.', 'info')
+
+            if user.role == 'student' and not user.approved:
+                supabase.auth.sign_out()
+                flash('Your account is pending admin approval.', 'warning')
+                return render_template('login.html', form=form)
+
+            login_user(user)
+            session['supabase_access_token'] = response.session.access_token
+            session['supabase_refresh_token'] = response.session.refresh_token
+
+            flash('Login successful!', 'success')
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('profile' if user.role == 'student' else 'admin_dashboard'))
+
         except Exception as e:
-            print(e)
+            print("Login error:", e)
             flash('Invalid email or password.', 'danger')
 
     return render_template('login.html', form=form)
@@ -169,7 +215,6 @@ def logout():
     flash('Logged out successfully.', 'info')
     return redirect(url_for('login'))
 
-# === PROFILE, EXAM, ADMIN, LEADERBOARD (unchanged logic, minor cleanup) ===
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
@@ -178,14 +223,16 @@ def profile():
 
     form = SelectCategoryForm()
     upload_message = None
+
     if 'upload_pic' in request.files:
         file = request.files['upload_pic']
-        if file.filename:
-            new_url = upload_to_supabase(file, current_user.id, 'student')
-            if new_url:
-                current_user.profile_pic = new_url
-                db.session.commit()
-                upload_message = "Profile picture updated!"
+        new_url = upload_to_supabase(file, current_user.supabase_uid)
+        if new_url:
+            current_user.profile_pic = new_url
+            db.session.commit()
+            upload_message = "Profile picture updated successfully!"
+        else:
+            upload_message = "Upload failed. Please select a valid image file (JPG, PNG, GIF, WebP)."
 
     if form.validate_on_submit():
         return redirect(url_for('exam', category=form.category.data))
@@ -197,10 +244,9 @@ def profile():
 
     chart_data = {
         'labels': [s.date.strftime('%b %d, %Y') for s in scores],
-        'scores': [s.score for s in scores]  # renamed for JS consistency
+        'scores': [s.score for s in scores]
     }
 
-    # Category averages
     category_scores = {}
     category_counts = {}
     for s in scores:
@@ -234,12 +280,13 @@ def admin_profile():
     upload_message = None
     if 'upload_pic' in request.files:
         file = request.files['upload_pic']
-        if file.filename:
-            new_url = upload_to_supabase(file, current_user.id, 'admin')
-            if new_url:
-                current_user.profile_pic = new_url
-                db.session.commit()
-                upload_message = "Profile picture updated!"
+        new_url = upload_to_supabase(file, current_user.supabase_uid)
+        if new_url:
+            current_user.profile_pic = new_url
+            db.session.commit()
+            upload_message = "Profile picture updated successfully!"
+        else:
+            upload_message = "Upload failed. Please select a valid image file (JPG, PNG, GIF, WebP)."
 
     return render_template('admin_profile.html', upload_message=upload_message)
 
@@ -284,50 +331,68 @@ def exam(category):
 @login_required
 def admin_dashboard():
     if current_user.role != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('login'))
+        flash('Access denied: Admin privileges required.', 'danger')
+        return redirect(url_for('profile'))
+
+    pending_users = []
+    approved_users = []
+    user_scores = {}
+    avg_category_data = {}
+    trend_data = {'labels': [], 'data': []}
 
     if request.method == 'POST':
         user_id = request.form.get('user_id')
         action = request.form.get('action')
-        user = User.query.get(user_id)
-        if user and user.role == 'student':
-            if action == 'approve':
-                user.approved = True
-                flash(f'{user.username} approved.', 'success')
-            elif action == 'reject':
-                db.session.delete(user)
-                flash(f'{user.username} rejected.', 'info')
-            db.session.commit()
+        if user_id and action:
+            try:
+                user_id = int(user_id)
+                user = User.query.get(user_id)
+                if user and user.role == 'student':
+                    if action == 'approve':
+                        user.approved = True
+                        db.session.commit()
+                        flash(f'{user.username} has been approved.', 'success')
+                    elif action == 'reject':
+                        Score.query.filter_by(user_id=user.id).delete()
+                        db.session.delete(user)
+                        db.session.commit()
+                        flash(f'{user.username} has been rejected and removed.', 'info')
+            except Exception as e:
+                print("Admin action error:", e)
+                flash('Invalid action.', 'danger')
 
-    pending_users = User.query.filter_by(approved=False, role='student').all()
+    pending_users = User.query.filter_by(approved=False, role='student').order_by(User.username).all()
     approved_users = User.query.filter_by(approved=True, role='student').order_by(User.username).all()
-    user_scores = {u.id: Score.query.filter_by(user_id=u.id).order_by(Score.date).all() for u in approved_users}
 
-    # Category averages
+    approved_user_ids = [u.id for u in approved_users]
+    all_scores = Score.query.filter(Score.user_id.in_(approved_user_ids)).order_by(Score.date).all() if approved_user_ids else []
+
+    user_scores = {}
+    for score in all_scores:
+        user_scores.setdefault(score.user_id, []).append(score)
+
     category_scores = {}
     category_counts = {}
-    for scores in user_scores.values():
-        for s in scores:
-            cat = s.category
-            category_scores[cat] = category_scores.get(cat, 0) + s.score
-            category_counts[cat] = category_counts.get(cat, 0) + 1
+    for score in all_scores:
+        cat = score.category
+        category_scores[cat] = category_scores.get(cat, 0) + score.score
+        category_counts[cat] = category_counts.get(cat, 0) + 1
 
     avg_category_data = {
         cat: round(category_scores[cat] / category_counts[cat], 1)
         for cat in category_scores if category_counts[cat] > 0
     }
 
-    all_scores = Score.query.join(User).filter(User.role == 'student', User.approved == True).order_by(Score.date).all()
-    trend_data = {
-        'labels': [s.date.strftime('%b %d') for s in all_scores],
-        'data': [s.score for s in all_scores]
-    }
+    if all_scores:
+        trend_data = {
+            'labels': [s.date.strftime('%b %d') for s in all_scores],
+            'data': [s.score for s in all_scores]
+        }
 
     return render_template(
         'admin_dashboard.html',
         pending_users=pending_users,
-        all_users=approved_users,
+        approved_users=approved_users,
         user_scores=user_scores,
         avg_category_data=avg_category_data,
         trend_data=trend_data
@@ -335,118 +400,67 @@ def admin_dashboard():
 
 @app.route('/leaderboard')
 def leaderboard():
-    students = User.query.filter_by(role='student', approved=True).all()
-    leaderboard_data = []
+    students_with_scores = (
+        db.session.query(User.id, User.username, User.email, User.profile_pic)
+        .outerjoin(Score, User.id == Score.user_id)
+        .filter(User.role == 'student', User.approved == True)
+        .group_by(User.id)
+        .having(func.count(Score.id) > 0)
+        .all()
+    )
 
-    for student in students:
-        scores = Score.query.filter_by(user_id=student.id).all()
-        if not scores:
-            continue
+    current_date = datetime.now().strftime("%B %d, %Y")
+
+    if not students_with_scores:
+        return render_template(
+            'leaderboard.html',
+            top_performers=[],
+            total_students=0,
+            all_avg=0,
+            current_date=current_date
+        )
+
+    student_ids = [s.id for s in students_with_scores]
+    all_scores = Score.query.filter(Score.user_id.in_(student_ids)).order_by(Score.user_id, Score.date).all()
+
+    leaderboard_data = []
+    student_scores = {sid: [] for sid in student_ids}
+    for score in all_scores:
+        student_scores[score.user_id].append(score)
+
+    for student in students_with_scores:
+        scores = student_scores[student.id]
         total_exams = len(scores)
         total_score = sum(s.score for s in scores)
-        average = round(total_score / total_exams, 1)
+        average = round(total_score / total_exams, 1) if total_exams else 0
 
         leaderboard_data.append({
+            'id': student.id,
             'username': student.username,
             'email': student.email,
-            'profile_pic': student.profile_pic or '/static/images/default.jpg',
+            'profile_pic': student.profile_pic,
             'total_exams': total_exams,
             'total_score': total_score,
             'average': average
         })
 
     leaderboard_data.sort(key=lambda x: (-x['average'], -x['total_exams']))
-    top_performers = leaderboard_data[:10]
 
-    active_students = len(leaderboard_data)
-    all_avg = round(sum(item['average'] for item in leaderboard_data) / len(leaderboard_data), 1) if leaderboard_data else 0
+    for i, item in enumerate(leaderboard_data, 1):
+        item['rank'] = i
+
+    top_performers = leaderboard_data[:10]
+    total_students = len(leaderboard_data)
+    all_avg = round(sum(x['average'] for x in leaderboard_data) / total_students, 1) if total_students else 0
 
     return render_template(
         'leaderboard.html',
         top_performers=top_performers,
-        total_students=active_students,
-        all_avg=all_avg
+        total_students=total_students,
+        all_avg=all_avg,
+        current_user=current_user,
+        current_date=current_date
     )
-
-# === PASSWORD RESET (Local + Flask-Mail) ===
-@app.route('/forgot_password', methods=['GET', 'POST'])
-def forgot_password():
-    if current_user.is_authenticated:
-        return redirect(url_for('profile' if current_user.role == 'student' else 'admin_dashboard'))
-
-    if request.method == 'POST':
-        email = request.form.get('email').lower().strip()
-        user = User.query.filter_by(email=email).first()
-        if user:
-            from flask_mail import Message
-            from app import mail
-            token = serializer.dumps(email, salt='password-reset-salt')
-            reset_url = url_for('reset_password', token=token, _external=True)
-            msg = Message("Password Reset - 6Milan Academy",
-                          sender=("6Milan Academy", "admin@6milancoding.academy"),
-                          recipients=[email])
-            msg.body = f'''
-Hello {user.username},
-
-You requested a password reset for your 6Milan Academy account.
-
-Click this link to reset your password (expires in 30 minutes):
-{reset_url}
-
-If you didn't request this, please ignore this email.
-
-Best regards,
-6Milan Coding Academy Team
-'''
-            try:
-                mail.send(msg)
-                flash('Password reset link sent! Check your email.', 'success')
-            except Exception as e:
-                print(e)
-                flash('Failed to send email. Try again later.', 'danger')
-        else:
-            flash('If that email is registered, a reset link has been sent.', 'info')
-
-        return redirect(url_for('login'))
-
-    return render_template('forgot_password.html')
-
-@app.route('/reset_password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    try:
-        email = serializer.loads(token, salt='password-reset-salt', max_age=1800)
-    except:
-        flash('Invalid or expired reset link.', 'danger')
-        return redirect(url_for('forgot_password'))
-
-    if request.method == 'POST':
-        password = request.form.get('password')
-        confirm = request.form.get('confirm_password')
-        if password != confirm:
-            flash('Passwords do not match.', 'danger')
-            return render_template('reset_password.html', token=token)
-        if len(password) < 8:
-            flash('Password must be at least 8 characters.', 'danger')
-            return render_template('reset_password.html', token=token)
-
-        user = User.query.filter_by(email=email).first()
-        if user:
-            # Update password in Supabase Auth
-            try:
-                supabase.auth.admin.update_user(
-                    user_id=user.supabase_uid or supabase.auth.get_user()['user']['id'],
-                    attributes={"password": password}
-                )
-            except:
-                pass  # fallback to local if needed
-
-            # Also update local hash if you store it
-            user.set_password(password)
-            db.session.commit()
-            flash('Password reset successful! Please log in.', 'success')
-            return redirect(url_for('login'))
-
-    return render_template('reset_password.html', token=token)
 
 if __name__ == '__main__':
     app.run(debug=True)

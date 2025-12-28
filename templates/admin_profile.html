@@ -8,35 +8,47 @@
         <h2 class="mb-4">Admin Profile</h2>
 
         <div class="mb-5">
-            <!-- Direct Supabase URL -->
-            <img src="{{ current_user.profile_pic or 'https://mrtwhvcfevspfpotjzti.supabase.co/storage/v1/object/public/6milan-exam-app/default.jpg' }}" 
-                 alt="Admin Profile Picture"
-                 class="rounded-circle mb-4 shadow"
-                 style="width: 200px; height: 200px; object-fit: cover; border: 5px solid #4f46e5;">
-            <h4 class="mb-1">{{ current_user.username }}</h4>
-            <p class="text-muted">{{ current_user.email }} <span class="badge bg-danger ms-2">ADMIN</span></p>
+            <!-- Admin Profile Picture -->
+            {% if current_user.profile_pic %}
+                <img src="{{ get_resized_profile_url(current_user.profile_pic, width=300, height=300) }}"
+                     alt="Admin Profile Picture"
+                     class="rounded-circle mb-4 shadow"
+                     style="width: 220px; height: 220px; object-fit: cover; border: 6px solid #4f46e5;">
+            {% else %}
+                <div class="rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white fw-bold shadow"
+                     style="width: 220px; height: 220px; font-size: 6rem; border: 6px solid #4f46e5;">
+                    {{ current_user.username[0]|upper }}
+                </div>
+            {% endif %}
+
+            <h4 class="mb-1 mt-4">{{ current_user.username }}</h4>
+            <p class="text-muted">
+                {{ current_user.email }}
+                <span class="badge bg-danger fs-6 ms-2">ADMIN</span>
+            </p>
         </div>
 
+        <!-- Upload Success Message -->
         {% if upload_message %}
             <div class="alert alert-success mb-4">{{ upload_message }}</div>
         {% endif %}
 
         <!-- Upload Form -->
-        <form method="POST" enctype="multipart/form-data" class="mb-5">
-            <div class="d-grid gap-2">
-                <label class="btn btn-outline-primary btn-lg">
-                    Choose New Profile Picture
-                    <input type="file" name="upload_pic" accept="image/*" style="display: none;">
-                </label>
-                <button type="submit" class="btn btn-primary btn-lg">Upload Picture</button>
-            </div>
-            <small class="text-muted d-block mt-2">Max 5MB • JPG, PNG, GIF, WebP</small>
-        </form>
+        <div class="text-center mb-5">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="input-group justify-content-center" style="max-width: 500px; margin: 0 auto;">
+                    <input type="file" name="upload_pic" class="form-control" accept="image/*">
+                    <button type="submit" class="btn btn-outline-primary">Upload Picture</button>
+                </div>
+                <small class="text-muted d-block mt-2">Max 5MB • JPG, PNG, GIF, WebP</small>
+            </form>
+        </div>
 
         <hr class="my-5">
 
+        <!-- Back Button -->
         <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary btn-lg w-100">
-            Back to Admin Dashboard
+            <i class="bi bi-arrow-left me-2"></i>Back to Admin Dashboard
         </a>
     </div>
 </div>

@@ -1,0 +1,223 @@
+<!-- templates/leaderboard.html -->
+{% extends "base.html" %}
+
+{% block title %}Leaderboard - 6Milan Coding Academy{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="display-5 fw-bold text-dark mb-1">
+                <i class="fas fa-trophy text-warning me-3"></i>Leaderboard
+            </h1>
+            <p class="text-muted mb-0">Top performers across all quizzes • Updated {{ current_date }}</p>
+        </div>
+        <div class="text-end">
+            <small class="text-muted">Active Students: <strong>{{ total_students }}</strong></small>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    {% if total_students > 0 %}
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-users fa-3x mb-3 opacity-75"></i>
+                    <h3 class="display-6 mb-0">{{ total_students }}</h3>
+                    <p class="mb-0 fw-medium">Active Students</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-chart-bar fa-3x mb-3 opacity-75"></i>
+                    <h3 class="display-6 mb-0">{{ all_avg }}%</h3>
+                    <p class="mb-0 fw-medium">Platform Average</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-medal fa-3x mb-3 opacity-75"></i>
+                    <h3 class="display-6 mb-0">{{ top_performers|length }}</h3>
+                    <p class="mb-0 fw-medium">Top Performers</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Top Performers Grid -->
+    <div class="row g-4">
+        {% if top_performers %}
+            {% for performer in top_performers %}
+            <div class="col-lg-6 col-xl-4">
+                <div class="card h-100 shadow-sm border-0 hover-shadow transition">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <!-- Rank Badge -->
+                            <div class="me-4 text-center">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold fs-4"
+                                     style="width: 60px; height: 60px;
+                                            background: {{ 'linear-gradient(45deg, #ffd700, #ffed4e)' if loop.index == 1 else
+                                                         'linear-gradient(45deg, #c0c0c0, #e0e0e0)' if loop.index == 2 else
+                                                         'linear-gradient(45deg, #cd7f32, #daa520)' if loop.index == 3 else
+                                                         '#6c757d' }};">
+                                    {{ loop.index }}
+                                </div>
+                                <small class="text-muted d-block mt-1">Rank</small>
+                            </div>
+
+                            <!-- User Info -->
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center">
+                                    {% if performer.profile_pic %}
+                                        <img src="{{ get_resized_profile_url(performer.profile_pic, width=120, height=120) }}"
+                                             alt="{{ performer.username }}"
+                                             class="rounded-circle me-3 border border-3 border-white shadow-sm"
+                                             style="width: 60px; height: 60px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white fw-bold me-3 shadow-sm"
+                                             style="width: 60px; height: 60px; font-size: 1.8rem;">
+                                            {{ performer.username[0]|upper }}
+                                        </div>
+                                    {% endif %}
+
+                                    <div>
+                                        <h5 class="mb-1 fw-bold">{{ performer.username }}</h5>
+                                        <p class="text-muted small mb-0">{{ performer.email }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="row text-center mt-4 pt-3 border-top">
+                            <div class="col-4">
+                                <div class="text-muted small">Exams</div>
+                                <div class="fw-bold fs-5">{{ performer.total_exams }}</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-muted small">Total Score</div>
+                                <div class="fw-bold fs-5">{{ performer.total_score }}</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-muted small">Average</div>
+                                <div class="fw-bold fs-4 text-success">{{ performer.average }}%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="text-center py-5 my-5">
+                    <i class="fas fa-chart-line fa-5x text-muted mb-4 opacity-50"></i>
+                    <h3 class="text-muted">No Scores Yet</h3>
+                    <p class="lead text-muted">Be the first to complete a quiz and claim the top spot!</p>
+                    {% if current_user.is_authenticated and current_user.role == 'student' %}
+                        <a href="{{ url_for('profile') }}" class="btn btn-primary btn-lg mt-3">
+                            <i class="fas fa-play me-2"></i>Start Taking Quizzes
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Full Table (Only if more than 10 students) -->
+    {% if total_students > 10 %}
+    <div class="mt-5">
+        <h4 class="mb-4 text-muted">Full Ranking ({{ total_students }} Students)</h4>
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-center" style="width: 80px;">Rank</th>
+                            <th>Student</th>
+                            <th class="text-center">Exams Taken</th>
+                            <th class="text-center">Total Score</th>
+                            <th class="text-center">Average</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for performer in top_performers %}
+                        <tr>
+                            <td class="text-center fw-bold fs-5">
+                                <span class="badge rounded-pill {{ 'bg-warning text-dark' if loop.index <= 3 else 'bg-secondary' }}">
+                                    {{ performer.rank }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if performer.profile_pic %}
+                                        <img src="{{ get_resized_profile_url(performer.profile_pic, width=100, height=100) }}"
+                                             alt="{{ performer.username }}"
+                                             class="rounded-circle me-3"
+                                             style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white fw-bold me-3"
+                                             style="width: 40px; height: 40px; font-size: 1.2rem;">
+                                            {{ performer.username[0]|upper }}
+                                        </div>
+                                    {% endif %}
+
+                                    <div>
+                                        <div class="fw-semibold">{{ performer.username }}</div>
+                                        <small class="text-muted">{{ performer.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center">{{ performer.total_exams }}</td>
+                            <td class="text-center">{{ performer.total_score }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-success fs-6">{{ performer.average }}%</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hover-shadow {
+        transition: all 0.3s ease;
+    }
+    .hover-shadow:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.15) !important;
+    }
+    .transition {
+        transition: all 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Optional: Add subtle animation on load
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.card').forEach((card, i) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, i * 100);
+        });
+    });
+</script>
+{% endblock %}

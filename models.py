@@ -1,4 +1,15 @@
-# models.py
+# models.py (Add the missing methods to User class)
+
+from datetime import datetime, timezone
+from flask_login import UserMixin
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
+from werkzeug.security import generate_password_hash, check_password_hash  # <-- ADD THIS
+
+db = SQLAlchemy()
+
+# models.py - Recommended version for Supabase Auth
+
 from datetime import datetime, timezone
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
@@ -7,37 +18,26 @@ from sqlalchemy import func
 db = SQLAlchemy()
 
 class User(db.Model, UserMixin):
-    __tablename__ = 'users'  # lowercase - safe for PostgreSQL (Supabase)
+    __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
-    # Supabase Auth UID (optional - for syncing if needed)
-    supabase_uid = db.Column(db.String(64), unique=True, index=True, nullable=True)
-    
+    supabase_uid = db.Column(db.String(255), unique=True, index=True, nullable=False)  # Required for linking
     username = db.Column(db.String(150), unique=True, nullable=False, index=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    role = db.Column(db.String(50), default='student')  # 'student' or 'admin'
-    approved = db.Column(db.Boolean, default=False)     # for student approval flow
-    
-    # Profile picture from Supabase Storage
-    profile_pic = db.Column(db.Text, default='/static/images/default.jpg')
-    
-    # Relationship to scores
-    scores = db.relationship(
-        'Score',
-        backref='user',
-        lazy=True,
-        cascade="all, delete-orphan"
-    )
+    role = db.Column(db.String(50), default='student')
+    approved = db.Column(db.Boolean, default=False)
+    profile_pic = db.Column(db.Text, nullable=True)  # nullable=True → use default image if None
 
-    # Flask-Login required method
+    # NO password_hash column! Supabase handles passwords
+
+    scores = db.relationship('Score', backref='user', lazy=True, cascade="all, delete-orphan")
+
     def get_id(self):
         return str(self.id)
 
-    # Helper to normalize email
     def set_email(self, email):
         self.email = email.lower().strip()
 
-    # Property for leaderboard total score
     @property
     def total_score(self):
         return sum(score.score for score in self.scores)
@@ -54,15 +54,13 @@ class User(db.Model, UserMixin):
 
     def __repr__(self):
         return f'<User {self.username} ({self.email}) role={self.role} approved={self.approved}>'
-
+        
 class Score(db.Model):
     __tablename__ = 'scores'
-
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     category = db.Column(db.String(100), nullable=False, index=True)
     score = db.Column(db.Integer, nullable=False)
-    
     date = db.Column(
         db.DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

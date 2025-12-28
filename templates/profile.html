@@ -5,15 +5,21 @@
 {% block content %}
 <div class="card shadow">
     <div class="card-body p-5">
-
         <!-- Profile Header -->
         <div class="text-center mb-5">
-            <!-- Correct bucket: 6milan-exam-app -->
-            <img src="{{ current_user.profile_pic or 'https://mrtwhvcfevspfpotjzti.supabase.co/storage/v1/object/public/6milan-exam-app/default.jpg' }}" 
-                 alt="Profile Picture" 
-                 class="rounded-circle mb-4 shadow"
-                 style="width: 160px; height: 160px; object-fit: cover; border: 5px solid #4f46e5;">
-            <h3 class="mb-2">{{ current_user.username }}</h3>
+            {% if current_user.profile_pic %}
+                <img src="{{ get_resized_profile_url(current_user.profile_pic, width=200, height=200) }}"
+                     alt="Profile Picture"
+                     class="rounded-circle mb-4 shadow"
+                     style="width: 160px; height: 160px; object-fit: cover; border: 5px solid #4f46e5;">
+            {% else %}
+                <div class="rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white fw-bold shadow"
+                     style="width: 160px; height: 160px; font-size: 4.5rem; border: 5px solid #4f46e5;">
+                    {{ current_user.username[0]|upper }}
+                </div>
+            {% endif %}
+
+            <h3 class="mb-2 mt-4">{{ current_user.username }}</h3>
             <p class="text-muted mb-0">{{ current_user.email }}</p>
 
             {% if upload_message %}
@@ -63,36 +69,41 @@
         <div class="row g-4 mb-5">
             <div class="col-md-6">
                 <div class="card h-100 shadow-sm">
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <h5 class="card-title text-center mb-4">Average Score by Category</h5>
-                        <canvas id="categoryChart" height="300"></canvas>
+                        <div style="position: relative; height: 380px;">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="card h-100 shadow-sm">
-                    <div class="card-body">
+                    <div class="card-body p-4">
                         <h5 class="card-title text-center mb-4">Your Score Trend Over Time</h5>
-                        <canvas id="trendChart" height="300"></canvas>
+                        <div style="position: relative; height: 380px;">
+                            <canvas id="trendChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Detailed Track Record Chart -->
-        <div class="text-center">
+        <div class="text-center mb-5">
             <h4 class="mb-4">Your Detailed Track Records</h4>
-            <div style="height: 350px; position: relative;">
-                <canvas id="scoreChart"
-                        data-labels='{{ chart_data.labels | tojson }}'
-                        data-scores='{{ chart_data.data | tojson }}'></canvas>
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <div style="position: relative; height: 450px;">
+                        <canvas id="scoreChart"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
-
     </div>
 </div>
 
-<!-- Chart.js + Student Charts Script -->
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 // Bar Chart: Average Score by Category
@@ -110,19 +121,20 @@ new Chart(document.getElementById('categoryChart'), {
     },
     options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: { y: { beginAtZero: true, max: 20, ticks: { stepSize: 2 } } }
     }
 });
 
-// Line Chart: Score Trend
+// Line Chart: Score Trend Over Time
 new Chart(document.getElementById('trendChart'), {
     type: 'line',
     data: {
         labels: {{ chart_data.labels | tojson }},
         datasets: [{
             label: 'Your Scores',
-            data: {{ chart_data.data | tojson }},
+            data: {{ chart_data.scores | tojson }},
             borderColor: '#10b981',
             backgroundColor: 'rgba(16, 185, 129, 0.1)',
             tension: 0.4,
@@ -132,6 +144,8 @@ new Chart(document.getElementById('trendChart'), {
     },
     options: {
         responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'top' } },
         scales: { y: { beginAtZero: true, max: 20, ticks: { stepSize: 2 } } }
     }
 });
@@ -143,7 +157,7 @@ new Chart(document.getElementById('scoreChart'), {
         labels: {{ chart_data.labels | tojson }},
         datasets: [{
             label: 'Exam Scores',
-            data: {{ chart_data.data | tojson }},
+            data: {{ chart_data.scores | tojson }},
             borderColor: '#4f46e5',
             backgroundColor: 'rgba(79, 70, 229, 0.1)',
             tension: 0.3,
@@ -152,7 +166,9 @@ new Chart(document.getElementById('scoreChart'), {
     },
     options: {
         responsive: true,
-        scales: { y: { beginAtZero: true, max: 20 } }
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'top' } },
+        scales: { y: { beginAtZero: true, max: 20, ticks: { stepSize: 2 } } }
     }
 });
 </script>
