@@ -359,7 +359,16 @@ p {
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
 }
 
-/* Responsive Adjustments */
+
+@media (max-width: 992px) {
+    /* Medium screens (tablets) - make chart containers shorter */
+    #categoryChart,
+    #trendChart,
+    #scoreChart {
+        height: 300px !important;
+    }
+}
+
 @media (max-width: 768px) {
     main {
         margin: 20px auto;
@@ -418,6 +427,66 @@ p {
 
     .input-group-text .form-check-label {
         font-size: 0.8rem;
+    }
+
+    /* Small tablets and large phones */
+    .row.g-4 > .col-md-6 {
+        margin-bottom: 2rem;
+    }
+
+    #categoryChart,
+    #trendChart {
+        height: 280px !important;
+    }
+
+    #scoreChart {
+        height: 350px !important;
+    }
+
+    /* Make chart legends and titles slightly smaller */
+    .card-title {
+        font-size: 1.1rem;
+    }
+}
+
+
+@media (max-width: 576px) {
+    /* Mobile phones - stack charts vertically with more compact height */
+    #categoryChart,
+    #trendChart {
+        height: 250px !important;
+    }
+
+    #scoreChart {
+        height: 320px !important;
+    }
+
+    /* Reduce padding in cards for better fit */
+    .card-body {
+        padding: 1.5rem !important;
+    }
+
+    /* Smaller font for chart container titles */
+    .card-title {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Make canvas containers adjust properly */
+    canvas {
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 400px) {
+    /* Very small phones */
+    #categoryChart,
+    #trendChart {
+        height: 220px !important;
+    }
+
+    #scoreChart {
+        height: 280px !important;
     }
 }
 
