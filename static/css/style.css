@@ -1,5 +1,3 @@
-/* static/css/style.css */
-
 /* Global Styles */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -40,13 +38,15 @@ main {
     padding: 20px;
 }
 
+/* Card and container defaults (now smaller) */
 .form-container, .dashboard, .exam-container, .card {
     background: white;
-    padding: 40px;
-    border-radius: 12px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
 }
 
+/* GENERAL TYPOGRAPHY */
 h2 {
     color: #1e293b;
     text-align: center;
@@ -58,6 +58,7 @@ p {
     color: #64748b;
 }
 
+/* INPUTS */
 .form-label {
     display: block;
     margin-bottom: 8px;
@@ -67,10 +68,10 @@ p {
 
 .form-control {
     width: 100%;
-    padding: 12px 16px;
+    padding: 10px 14px;
     border: 2px solid #e2e8f0;
     border-radius: 8px;
-    font-size: 16px;
+    font-size: 15px;
     transition: border 0.3s, box-shadow 0.3s;
 }
 
@@ -80,11 +81,12 @@ p {
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
 }
 
+/* BUTTONS */
 .btn {
-    padding: 12px 24px;
+    padding: 10px 18px;
     border: none;
     border-radius: 8px;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.3s;
@@ -114,14 +116,26 @@ p {
     font-size: 18px;
 }
 
+/* Smaller cards (shrunk size) */
 .card {
     background: white;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    margin-bottom: 30px;
+    padding: 18px !important;
+    border-radius: 10px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+    margin-bottom: 18px;
 }
 
+.card-body {
+    padding: 1rem !important;
+}
+
+/* Card headings smaller */
+.card-title {
+    font-size: 1rem;
+    margin-bottom: .5rem;
+}
+
+/* QUESTIONS */
 .question-card {
     background: #f8fafc;
     padding: 20px;
@@ -137,6 +151,7 @@ p {
     color: #1e293b;
 }
 
+/* OPTIONS */
 .options label {
     display: block;
     margin: 12px 0;
@@ -149,11 +164,13 @@ p {
     transform: scale(1.2);
 }
 
+/* SUBMISSION */
 .submit-section {
     text-align: center;
     margin-top: 40px;
 }
 
+/* ERROR TEXT */
 .error {
     color: #ef4444;
     font-size: 14px;
@@ -161,6 +178,7 @@ p {
     margin-top: 5px;
 }
 
+/* FOOTER */
 .footer-text {
     text-align: center;
     margin-top: 30px;
@@ -177,7 +195,7 @@ p {
     text-decoration: underline;
 }
 
-/* Admin Dashboard Styles */
+/* ADMIN STYLES */
 .subtitle {
     text-align: center;
     color: #64748b;
@@ -199,6 +217,7 @@ p {
     color: #1d4ed8;
 }
 
+/* TABLES */
 .admin-table {
     width: 100%;
     border-collapse: collapse;
@@ -222,6 +241,7 @@ p {
     background: #f8fafc;
 }
 
+/* BUTTON SIZING */
 .btn-small {
     padding: 6px 12px;
     font-size: 14px;
@@ -236,6 +256,7 @@ p {
     background: #dc2626;
 }
 
+/* STUDENT PROGRESS */
 .student-progress {
     margin-bottom: 20px;
 }
@@ -259,6 +280,7 @@ p {
     font-weight: normal;
 }
 
+/* LISTS */
 .score-list {
     list-style: none;
     padding: 0;
@@ -293,6 +315,7 @@ p {
     font-size: 14px;
 }
 
+/* PERFORMANCE LABELS */
 .performance {
     font-size: 14px;
     font-weight: 600;
@@ -318,7 +341,7 @@ p {
     padding: 30px 0;
 }
 
-/* === Checkbox-based Password Show/Hide (Clean & Responsive) === */
+/* CHECKBOX PASSWORD VISIBILITY */
 .input-group-text .form-check {
     display: flex;
     align-items: center;
@@ -339,7 +362,7 @@ p {
     color: #64748b;
 }
 
-/* Seamless attachment to input */
+/* ATTACHED INPUT GROUP */
 .input-group > .form-control {
     border-right: 0;
 }
@@ -349,7 +372,7 @@ p {
     border-left: 0;
 }
 
-/* Focus ring includes checkbox area */
+/* Focus ring */
 .input-group:focus-within .form-control,
 .input-group:focus-within .input-group-text {
     border-color: #4f46e5;
@@ -359,9 +382,62 @@ p {
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
 }
 
+/* ---------- SMALLER CHARTS ---------- */
+
+#categoryChart,
+#trendChart {
+    max-height: 240px !important;
+}
+
+#scoreChart {
+    max-height: 280px !important;
+}
+
+/* Reduce global section spacing */
+.mb-5 { margin-bottom: 2rem !important; }
+
+/* ------------ APPROVED STUDENTS COMPACT GRID ------------- */
+
+.approved-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+}
+
+.student-tile {
+    padding: 10px !important;
+    border-radius: 12px;
+}
+
+.student-avatar {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+}
+
+.name-small {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.email-small {
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.score-small {
+    font-size: 0.85rem;
+}
+
+/* ---------- RESPONSIVE ---------- */
 
 @media (max-width: 992px) {
-    /* Medium screens (tablets) - make chart containers shorter */
     #categoryChart,
     #trendChart,
     #scoreChart {
@@ -376,142 +452,38 @@ p {
     }
 
     .form-container, .dashboard, .exam-container, .card {
-        padding: 25px;
+        padding: 20px;
         border-radius: 10px;
     }
 
-    header h1 {
-        font-size: 24px;
-    }
-
-    header a {
-        float: none;
-        display: block;
-        margin-top: 15px;
-    }
-
-    h2 {
-        font-size: 24px;
-    }
-
-    .question-text {
-        font-size: 17px;
-    }
-
-    .btn {
-        width: 100%;
-        padding: 14px;
-        font-size: 16px;
-    }
-
-    .btn-small {
-        width: 100%;
-        margin-bottom: 8px;
-        margin-right: 0;
-    }
-
-    .student-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .score-list li {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    .performance {
-        align-self: flex-start;
-    }
-
-    .input-group-text .form-check-label {
-        font-size: 0.8rem;
-    }
-
-    /* Small tablets and large phones */
-    .row.g-4 > .col-md-6 {
-        margin-bottom: 2rem;
-    }
-
     #categoryChart,
-    #trendChart {
-        height: 280px !important;
-    }
+    #trendChart { height: 220px !important; }
+    #scoreChart { height: 250px !important; }
 
-    #scoreChart {
-        height: 350px !important;
-    }
-
-    /* Make chart legends and titles slightly smaller */
     .card-title {
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
 }
 
-
 @media (max-width: 576px) {
-    /* Mobile phones - stack charts vertically with more compact height */
     #categoryChart,
-    #trendChart {
-        height: 250px !important;
-    }
+    #trendChart { height: 200px !important; }
+    #scoreChart { height: 220px !important; }
 
-    #scoreChart {
-        height: 320px !important;
-    }
+    .card-body { padding: .8rem !important; }
 
-    /* Reduce padding in cards for better fit */
-    .card-body {
-        padding: 1.5rem !important;
-    }
-
-    /* Smaller font for chart container titles */
     .card-title {
-        font-size: 1rem;
-        margin-bottom: 1rem;
+        font-size: 0.9rem;
+        margin-bottom: .6rem;
     }
 
-    /* Make canvas containers adjust properly */
     canvas {
         width: 100% !important;
     }
 }
 
 @media (max-width: 400px) {
-    /* Very small phones */
     #categoryChart,
-    #trendChart {
-        height: 220px !important;
-    }
-
-    #scoreChart {
-        height: 280px !important;
-    }
-}
-
-@media (max-width: 480px) {
-    .input-group-text .form-check {
-        padding: 0 6px;
-        gap: 5px;
-    }
-
-    .input-group-text .form-check-label {
-        font-size: 0.75rem;
-    }
-
-    .input-group-text .form-check-input {
-        transform: scale(0.9);
-    }
-}
-
-@media (max-width: 360px) {
-    .input-group-text .form-check {
-        padding: 0 4px;
-        gap: 4px;
-    }
-
-    .input-group-text .form-check-label {
-        font-size: 0.7rem;
-    }
+    #trendChart { height: 180px !important; }
+    #scoreChart { height: 200px !important; }
 }

@@ -1,268 +1,173 @@
-<!-- templates/leaderboard.html -->
 {% extends "base.html" %}
 
 {% block title %}Leaderboard - 6Milan Coding Academy{% endblock %}
 
 {% block content %}
 <div class="container my-4 my-md-5">
+
     <!-- Page Header -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-3">
         <div>
-            <h1 class="h3 h2-md fw-bold text-dark mb-1">
+            <h1 class="h4 fw-bold text-dark mb-1">
                 <i class="fas fa-trophy text-warning me-2"></i>Leaderboard
             </h1>
             <p class="text-muted mb-0 small">Top performers • Updated {{ current_date }}</p>
         </div>
-        <div class="text-start text-md-end">
-            <small class="text-muted">Active Students: <strong>{{ total_students }}</strong></small>
+        <div class="text-start text-md-end small">
+            <span class="text-muted">Active Students: <strong>{{ total_students }}</strong></span>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
+    <!-- Statistic Cards Smaller -->
     {% if total_students > 0 %}
-    <div class="row g-3 g-md-4 mb-4">
+    <div class="row g-2 mb-3">
         <div class="col-4 col-md-4">
-            <div class="card border-0 shadow-sm text-white h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                <div class="card-body text-center py-3">
-                    <i class="fas fa-users fa-2x mb-2 opacity-75"></i>
-                    <h5 class="mb-0">{{ total_students }}</h5>
-                    <p class="mb-0 small fw-medium">Students</p>
+            <div class="card border-0 shadow-sm text-white h-100" style="background: linear-gradient(135deg,#667eea,#764ba2);">
+                <div class="card-body text-center py-2">
+                    <i class="fas fa-users fa-lg mb-1 opacity-75"></i>
+                    <h6 class="mb-0 small">{{ total_students }}</h6>
+                    <p class="mb-0 small">Students</p>
                 </div>
             </div>
         </div>
         <div class="col-4 col-md-4">
-            <div class="card border-0 shadow-sm text-white h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                <div class="card-body text-center py-3">
-                    <i class="fas fa-chart-bar fa-2x mb-2 opacity-75"></i>
-                    <h5 class="mb-0">{{ all_avg }}%</h5>
-                    <p class="mb-0 small fw-medium">Avg Score</p>
+            <div class="card border-0 shadow-sm text-white h-100" style="background: linear-gradient(135deg,#f093fb,#f5576c);">
+                <div class="card-body text-center py-2">
+                    <i class="fas fa-chart-bar fa-lg mb-1 opacity-75"></i>
+                    <h6 class="mb-0 small">{{ all_avg }}%</h6>
+                    <p class="mb-0 small">Avg Score</p>
                 </div>
             </div>
         </div>
         <div class="col-4 col-md-4">
-            <div class="card border-0 shadow-sm text-white h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                <div class="card-body text-center py-3">
-                    <i class="fas fa-medal fa-2x mb-2 opacity-75"></i>
-                    <h5 class="mb-0">{{ top_performers|length }}</h5>
-                    <p class="mb-0 small fw-medium">Top 10</p>
+            <div class="card border-0 shadow-sm text-white h-100" style="background: linear-gradient(135deg,#4facfe,#00f2fe);">
+                <div class="card-body text-center py-2">
+                    <i class="fas fa-medal fa-lg mb-1 opacity-75"></i>
+                    <h6 class="mb-0 small">{{ top_performers|length }}</h6>
+                    <p class="mb-0 small">Top 10</p>
                 </div>
             </div>
         </div>
     </div>
     {% endif %}
 
-    <!-- Backend Sorting Buttons -->
-    <div class="d-flex justify-content-center justify-content-md-end mb-4">
-        <div class="btn-group" role="group" aria-label="Sort leaderboard">
-            <a href="{{ url_for('leaderboard', sort='average_desc') }}"
-               class="btn btn-outline-primary {{ 'active' if current_sort == 'average_desc' else '' }}">
-                Average ↓
-            </a>
-            <a href="{{ url_for('leaderboard', sort='average_asc') }}"
-               class="btn btn-outline-primary {{ 'active' if current_sort == 'average_asc' else '' }}">
-                Average ↑
-            </a>
-            <a href="{{ url_for('leaderboard', sort='exams_desc') }}"
-               class="btn btn-outline-secondary {{ 'active' if current_sort == 'exams_desc' else '' }}">
-                Exams ↓
-            </a>
-            <a href="{{ url_for('leaderboard', sort='score_desc') }}"
-               class="btn btn-outline-secondary {{ 'active' if current_sort == 'score_desc' else '' }}">
-                Score ↓
-            </a>
+    <!-- Sort Buttons -->
+    <div class="d-flex justify-content-center justify-content-md-end mb-3">
+        <div class="btn-group btn-group-sm">
+            <a href="{{ url_for('leaderboard', sort='average_desc') }}" class="btn btn-outline-primary {{ 'active' if current_sort == 'average_desc' else '' }}">Avg ↓</a>
+            <a href="{{ url_for('leaderboard', sort='average_asc') }}" class="btn btn-outline-primary {{ 'active' if current_sort == 'average_asc' else '' }}">Avg ↑</a>
+            <a href="{{ url_for('leaderboard', sort='exams_desc') }}" class="btn btn-outline-secondary {{ 'active' if current_sort == 'exams_desc' else '' }}">Exams ↓</a>
+            <a href="{{ url_for('leaderboard', sort='score_desc') }}" class="btn btn-outline-secondary {{ 'active' if current_sort == 'score_desc' else '' }}">Score ↓</a>
         </div>
     </div>
 
-    <!-- Leaderboard Grid -->
-    <div class="row g-3 g-md-4">
+    <!-- Leaderboard GRID -->
+    <div class="row g-2 g-md-3">
+
         {% if top_performers %}
-            {% for performer in top_performers %}
-            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                <div class="card h-100 shadow-sm border-0 hover-shadow transition">
-                    <div class="card-body p-3">
-                        <div class="d-flex align-items-center mb-3">
-                            <!-- Rank Badge -->
-                            <div class="me-3 text-center flex-shrink-0">
-                                <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                                     style="width: 42px; height: 42px; font-size: 1.2rem;
-                                            background: {{ 'linear-gradient(45deg, #ffd700, #ffed4e)' if loop.index == 1 else
-                                                         'linear-gradient(45deg, #c0c0c0, #e0e0e0)' if loop.index == 2 else
-                                                         'linear-gradient(45deg, #cd7f32, #daa520)' if loop.index == 3 else
-                                                         '#6c757d' }};">
-                                    {{ performer.rank }}
-                                </div>
-                            </div>
+        {% for performer in top_performers %}
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
 
-                            <!-- User Info -->
-                            <div class="flex-grow-1 min-width-0">
-                                <div class="d-flex align-items-center">
-                                    {% if performer.profile_pic %}
-                                        <img src="{{ get_resized_profile_url(performer.profile_pic, width=90, height=90) }}"
-                                             alt="{{ performer.username }}"
-                                             class="rounded-circle me-3 flex-shrink-0 shadow-sm"
-                                             style="width: 40px; height: 40px; object-fit: cover;">
-                                    {% else %}
-                                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white fw-bold me-3 flex-shrink-0 shadow-sm"
-                                             style="width: 40px; height: 40px; font-size: 1.2rem;">
-                                            {{ performer.username[0]|upper }}
-                                        </div>
-                                    {% endif %}
+            <div class="card h-100 shadow-sm border-0 hover-shadow" style="border-radius:14px;">
+                <div class="card-body p-2">
 
-                                    <div class="min-width-0">
-                                        <h6 class="mb-0 fw-bold text-truncate">{{ performer.username }}</h6>
-                                        <p class="text-muted small mb-0 text-truncate">{{ performer.email }}</p>
-                                    </div>
-                                </div>
+                    <!-- NAME AT TOP -->
+                    <p class="text-center mb-1 small fw-bold text-primary text-truncate">
+                        {{ performer.username }}
+                    </p>
+
+                    <div class="d-flex align-items-center mb-2">
+
+                        <!-- Rank -->
+                        <div class="me-2">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                                 style="width: 34px; height: 34px; font-size: .9rem;
+                                     background:
+                                     {{ 'linear-gradient(45deg,#ffd700,#ffed4e)' if loop.index==1 else
+                                        'linear-gradient(45deg,#c0c0c0,#e0e0e0)' if loop.index==2 else
+                                        'linear-gradient(45deg,#cd7f32,#daa520)' if loop.index==3 else
+                                        '#6c757d' }}">
+                                {{ performer.rank }}
                             </div>
                         </div>
 
-                        <!-- Stats -->
-                        <div class="row text-center g-2 mt-2 pt-2 border-top">
-                            <div class="col-4">
-                                <div class="text-muted small">Exams</div>
-                                <div class="fw-bold small">{{ performer.total_exams }}</div>
-                            </div>
-                            <div class="col-4">
-                                <div class="text-muted small">Score</div>
-                                <div class="fw-bold small">{{ performer.total_score }}</div>
-                            </div>
-                            <div class="col-4">
-                                <div class="text-muted small">Avg</div>
-                                <div class="fw-bold text-success small">{{ performer.average }}%</div>
-                            </div>
+                        <!-- PROFILE PIC -->
+                        {% if performer.profile_pic %}
+                        <img src="{{ get_resized_profile_url(performer.profile_pic, width=80, height=80) }}"
+                             class="rounded-circle shadow-sm"
+                             style="width: 34px; height: 34px; object-fit: cover;">
+                        {% else %}
+                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white fw-bold shadow-sm"
+                             style="width: 34px; height: 34px; font-size: .9rem;">
+                             {{ performer.username[0]|upper }}
+                        </div>
+                        {% endif %}
+
+                    </div>
+
+                    <!-- Stats compact -->
+                    <div class="row text-center g-1 mt-1 pt-1 border-top small">
+                        <div class="col-4">
+                            <div class="text-muted tiny">Exams</div>
+                            <div class="fw-bold">{{ performer.total_exams }}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted tiny">Score</div>
+                            <div class="fw-bold">{{ performer.total_score }}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted tiny">Avg</div>
+                            <div class="fw-bold text-success">{{ performer.average }}%</div>
                         </div>
                     </div>
+
                 </div>
             </div>
-            {% endfor %}
+
+        </div>
+        {% endfor %}
         {% else %}
-            <div class="col-12">
-                <div class="text-center py-5">
-                    <i class="fas fa-chart-line fa-5x text-muted mb-4 opacity-50"></i>
-                    <h3 class="text-muted">No Scores Yet</h3>
-                    <p class="lead text-muted">Be the first to complete a quiz!</p>
-                    {% if current_user.is_authenticated and current_user.role == 'student' %}
-                        <a href="{{ url_for('profile') }}" class="btn btn-primary mt-3">
-                            Start Taking Quizzes
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
+        <div class="col-12 text-center py-5">
+            <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+            <h5 class="text-muted">No Scores Yet</h5>
+        </div>
         {% endif %}
+
     </div>
 
-    <!-- Full Table (Only if >10 students) -->
-    {% if total_students > 10 %}
-    <div class="mt-5">
-        <h4 class="mb-3 text-muted text-center text-md-start">Full Ranking ({{ total_students }} Students)</h4>
-        <div class="card shadow-sm">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 small">
-                    <thead class="table-dark">
-                        <tr>
-                            <th class="text-center" style="width: 60px;">Rank</th>
-                            <th>Student</th>
-                            <th class="text-center">Exams</th>
-                            <th class="text-center">Score</th>
-                            <th class="text-center">Average</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for performer in top_performers %}
-                        <tr>
-                            <td class="text-center">
-                                <span class="badge rounded-pill {{ 'bg-warning text-dark' if performer.rank <= 3 else 'bg-secondary' }}">
-                                    {{ performer.rank }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    {% if performer.profile_pic %}
-                                        <img src="{{ get_resized_profile_url(performer.profile_pic, width=70, height=70) }}"
-                                             alt="{{ performer.username }}"
-                                             class="rounded-circle me-2"
-                                             style="width: 32px; height: 32px; object-fit: cover;">
-                                    {% else %}
-                                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white fw-bold me-2"
-                                             style="width: 32px; height: 32px; font-size: 0.9rem;">
-                                            {{ performer.username[0]|upper }}
-                                        </div>
-                                    {% endif %}
-                                    <div class="text-truncate">
-                                        <div class="fw-medium text-truncate">{{ performer.username }}</div>
-                                        <small class="text-muted text-truncate">{{ performer.email }}</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="text-center">{{ performer.total_exams }}</td>
-                            <td class="text-center">{{ performer.total_score }}</td>
-                            <td class="text-center">
-                                <span class="badge bg-success">{{ performer.average }}%</span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-    .hover-shadow {
-        transition: all 0.3s ease;
-    }
-    .hover-shadow:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.1) !important;
-    }
 
-    .text-truncate {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 160px;
-    }
+.card {
+    border-radius: 14px;
+}
 
-    @media (max-width: 768px) {
-        .text-truncate {
-            max-width: 130px;
-        }
-        .btn-group {
-            width: 100%;
-        }
-        .btn-group .btn {
-            flex: 1;
-            font-size: 0.9rem;
-        }
-    }
+/* smaller overall card size */
+.card-body{
+    padding: 10px !important;
+}
 
-    @media (max-width: 576px) {
-        .col-lg-3 {
-            flex: 0 0 100%;
-            max-width: 100%;
-        }
-    }
+/* hover animation */
+.hover-shadow{
+    transition: .25s;
+}
+.hover-shadow:hover{
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0,0,0,.12)!important;
+}
+
+/* truncate names */
+.text-truncate{
+    max-width: 140px;
+}
+
+/* super small font label for stats */
+.tiny{
+    font-size: 10px;
+}
+
 </style>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    // Optional: Gentle fade-in animation for cards
-    document.addEventListener('DOMContentLoaded', function () {
-        const cards = document.querySelectorAll('.card.hover-shadow');
-        cards.forEach((card, i) => {
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(10px)';
-            setTimeout(() => {
-                card.style.transition = 'all 0.4s ease';
-                card.style.opacity = '1';
-                card.style.transform = 'translateY(0)';
-            }, i * 60);
-        });
-    });
-</script>
 {% endblock %}

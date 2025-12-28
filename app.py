@@ -10,41 +10,13 @@ from wtforms.validators import DataRequired
 from flask_wtf import FlaskForm
 from supabase import create_client, Client
 from datetime import datetime, timezone
-import os
 from sqlalchemy import func
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Register template helper for resized profile pictures
-@app.context_processor
-def utility_processor():
-    return dict(get_resized_profile_url=get_resized_profile_url)
+# ---------------------- Helper functions ---------------------- #
 
-# Supabase client (service role key for server-side operations)
-supabase: Client = create_client(
-    app.config['SUPABASE_URL'],
-    app.config['SUPABASE_SERVICE_ROLE_KEY']
-)
-
-# Supabase Storage configuration
-SUPABASE_BUCKET = "6milan-exam-app"
-SUPABASE_STORAGE_BASE_URL = f"{app.config['SUPABASE_URL'].rstrip('/')}/storage/v1/object/public/{SUPABASE_BUCKET}/"
-
-# Database and Login Manager setup
-db.init_app(app)
-
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-with app.app_context():
-    db.create_all()
-
-# Helper functions
 def get_total_score(user_id):
     scores = Score.query.filter_by(user_id=user_id).all()
     return sum(s.score for s in scores) if scores else 0
@@ -64,70 +36,85 @@ def get_performance_remark(total_score, total_exams):
     else:
         return "Keep Practicing! 💪"
 
-# Robust Supabase upload function
+# Supabase client
+supabase: Client = create_client(
+    app.config['SUPABASE_URL'],
+    app.config['SUPABASE_SERVICE_ROLE_KEY']
+)
+SUPABASE_BUCKET = "6milan-exam-app"
+SUPABASE_STORAGE_BASE_URL = f"{app.config['SUPABASE_URL'].rstrip('/')}/storage/v1/object/public/{SUPABASE_BUCKET}/"
+
 def upload_to_supabase(file, user_supabase_uid):
-    """
-    Uploads a profile picture to Supabase Storage.
-    Returns public URL on success, None on failure.
-    """
-    if not file or not file.filename or file.filename.strip() == '':
-        print("Upload skipped: No file selected")
+    """Uploads a profile picture and returns public URL or None."""
+    if not file or not file.filename.strip():
         return None
 
-    # Validate extension
     allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
     if '.' not in file.filename:
-        print("Upload blocked: No file extension")
         return None
     ext = file.filename.rsplit('.', 1)[1].lower()
     if ext not in allowed_extensions:
-        print(f"Upload blocked: Invalid extension '{ext}'")
         return None
 
-    # Construct path
     path = f"{user_supabase_uid}/profile.{ext}"
-
     try:
         file.stream.seek(0)
         file_bytes = file.stream.read()
-        if not file_bytes or len(file_bytes) == 0:
-            print("Upload skipped: Empty file")
+        if not file_bytes:
             return None
 
         supabase.storage.from_(SUPABASE_BUCKET).upload(
             path=path,
             file=file_bytes,
-            file_options={
-                "content-type": file.mimetype or f"image/{ext}",
-                "upsert": True
-            }
+            file_options={"content-type": file.mimetype or f"image/{ext}", "upsert": True}
         )
-
-        public_url = f"{SUPABASE_STORAGE_BASE_URL}{path}"
-        print(f"Upload successful: {public_url}")
-        return public_url
-
+        return f"{SUPABASE_STORAGE_BASE_URL}{path}"
     except Exception as e:
-        print(f"Supabase upload error: {type(e).__name__}: {e}")
+        print(f"Supabase upload error: {e}")
         return None
 
-# Profile picture resizing helper
+def handle_profile_upload():
+    """Helper for profile picture upload and DB update."""
+    upload_message = None
+    if 'upload_pic' in request.files:
+        file = request.files['upload_pic']
+        new_url = upload_to_supabase(file, current_user.supabase_uid)
+        if new_url:
+            current_user.profile_pic = new_url
+            db.session.commit()
+            upload_message = "Profile picture updated successfully!"
+        else:
+            upload_message = "Upload failed. Please select a valid image file (JPG, PNG, GIF, WebP)."
+    return upload_message
+
 def get_resized_profile_url(profile_pic_url, width=None, height=None, quality=80):
     if not profile_pic_url:
-        return None  # Template shows initials placeholder
-
-    params = []
-    if width:
-        params.append(f"width={width}")
-    if height:
-        params.append(f"height={height}")
-    params.append(f"quality={quality}")
-    params.append("resize=cover")
-
-    transform_str = "&".join(params)
+        return None
+    params = [f"width={width}" if width else "",
+              f"height={height}" if height else "",
+              f"quality={quality}",
+              "resize=cover"]
+    transform_str = "&".join(p for p in params if p)
     return f"{profile_pic_url}?{transform_str}"
 
-# Routes
+@app.context_processor
+def utility_processor():
+    return dict(get_resized_profile_url=get_resized_profile_url)
+
+# ---------------------- Flask setup ---------------------- #
+db.init_app(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+with app.app_context():
+    db.create_all()
+
+# ---------------------- Routes ---------------------- #
+
 @app.route('/')
 def index():
     return redirect(url_for('login'))
@@ -149,7 +136,6 @@ def signup():
                 "password": password,
                 "options": {"data": {"username": username}}
             })
-
             if response.user:
                 supabase_uid = response.user.id
                 if User.query.filter_by(supabase_uid=supabase_uid).first():
@@ -166,10 +152,8 @@ def signup():
                 )
                 db.session.add(new_user)
                 db.session.commit()
-
                 flash('Signup successful! Your account is pending admin approval.', 'success')
                 return redirect(url_for('login'))
-
         except Exception as e:
             print("Signup error:", e)
             flash('Signup failed. Please try again.', 'danger')
@@ -188,16 +172,14 @@ def login():
 
         try:
             response = supabase.auth.sign_in_with_password({"email": email, "password": password})
-
             if not response.user:
                 flash('Invalid email or password.', 'danger')
                 return render_template('login.html', form=form)
 
             supabase_uid = response.user.id
-            user = User.query.filter_by(supabase_uid=supabase_uid).first() or \
-                   User.query.filter_by(email=email).first()
-
+            user = User.query.filter_by(supabase_uid=supabase_uid).first()
             if not user:
+                # If user doesn't exist locally, create with pending approval
                 user = User(
                     supabase_uid=supabase_uid,
                     email=email,
@@ -218,11 +200,9 @@ def login():
             login_user(user)
             session['supabase_access_token'] = response.session.access_token
             session['supabase_refresh_token'] = response.session.refresh_token
-
             flash('Login successful!', 'success')
             next_page = request.args.get('next')
             return redirect(next_page or url_for('profile' if user.role == 'student' else 'admin_dashboard'))
-
         except Exception as e:
             print("Login error:", e)
             flash('Invalid email or password.', 'danger')
@@ -236,25 +216,15 @@ def logout():
     flash('Logged out successfully.', 'info')
     return redirect(url_for('login'))
 
+# ---------------------- Student Profile ---------------------- #
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
     if current_user.role != 'student':
         return redirect(url_for('admin_dashboard' if current_user.role == 'admin' else 'login'))
 
+    upload_message = handle_profile_upload()
     form = SelectCategoryForm()
-    upload_message = None
-
-    if 'upload_pic' in request.files:
-        file = request.files['upload_pic']
-        new_url = upload_to_supabase(file, current_user.supabase_uid)
-        if new_url:
-            current_user.profile_pic = new_url
-            db.session.commit()
-            upload_message = "Profile picture updated successfully!"
-        else:
-            upload_message = "Upload failed. Please select a valid image file (JPG, PNG, GIF, WebP)."
-
     if form.validate_on_submit():
         return redirect(url_for('exam', category=form.category.data))
 
@@ -275,10 +245,8 @@ def profile():
         category_scores[cat] = category_scores.get(cat, 0) + s.score
         category_counts[cat] = category_counts.get(cat, 0) + 1
 
-    avg_category_data = {
-        cat: round(category_scores[cat] / category_counts[cat], 1)
-        for cat in category_scores if category_counts[cat] > 0
-    }
+    avg_category_data = {cat: round(category_scores[cat] / category_counts[cat], 1)
+                         for cat in category_scores if category_counts[cat] > 0}
 
     return render_template(
         'profile.html',
@@ -291,26 +259,40 @@ def profile():
         avg_category_data=avg_category_data
     )
 
+# ---------------------- Student Profile Update ---------------------- #
+@app.route('/student_profile', methods=['GET', 'POST'])
+@login_required
+def student_profile():
+    if current_user.role != 'student':
+        flash('Access denied.', 'danger')
+        return redirect(url_for('login'))
+
+    upload_message = handle_profile_upload()
+
+    if request.method == "POST" and 'update_profile' in request.form:
+        new_username = request.form.get("username", "").strip()
+        new_email = request.form.get("email", "").strip().lower()
+        if new_username:
+            current_user.username = new_username
+        if new_email:
+            current_user.email = new_email
+        db.session.commit()
+        flash("Profile updated successfully!", "success")
+        return redirect(url_for("student_profile"))
+
+    return render_template("student_profile.html", upload_message=upload_message)
+
+# ---------------------- Admin Profile ---------------------- #
 @app.route('/admin_profile', methods=['GET', 'POST'])
 @login_required
 def admin_profile():
     if current_user.role != 'admin':
         flash('Access denied.', 'danger')
         return redirect(url_for('login'))
-
-    upload_message = None
-    if 'upload_pic' in request.files:
-        file = request.files['upload_pic']
-        new_url = upload_to_supabase(file, current_user.supabase_uid)
-        if new_url:
-            current_user.profile_pic = new_url
-            db.session.commit()
-            upload_message = "Profile picture updated successfully!"
-        else:
-            upload_message = "Upload failed. Please select a valid image file (JPG, PNG, GIF, WebP)."
-
+    upload_message = handle_profile_upload()
     return render_template('admin_profile.html', upload_message=upload_message)
 
+# ---------------------- Exam Route ---------------------- #
 @app.route('/exam/<category>', methods=['GET', 'POST'])
 @login_required
 def exam(category):
@@ -319,47 +301,29 @@ def exam(category):
         return redirect(url_for('profile'))
 
     q_list = questions[category]
-    class ExamForm(FlaskForm):
-        pass
-
-    for i, (q, opts, _) in enumerate(q_list, 1):
-        setattr(ExamForm, f'q{i}', RadioField(q, choices=opts, validators=[DataRequired()]))
-
-    ExamForm.submit = SubmitField('Submit Exam')
+    fields = {f'q{i+1}': RadioField(q, choices=opts, validators=[DataRequired()]) 
+              for i, (q, opts, _) in enumerate(q_list)}
+    ExamForm = type('ExamForm', (FlaskForm,), {**fields, 'submit': SubmitField('Submit Exam')})
     form = ExamForm()
 
     if form.validate_on_submit():
-        score = 0
-        for i, (_, _, ans) in enumerate(q_list, 1):
-            if getattr(form, f'q{i}').data == ans:
-                score += 1
-
-        new_score = Score(user_id=current_user.id, category=category, score=score, date=datetime.now(timezone.utc))
-        db.session.add(new_score)
+        score = sum(getattr(form, f'q{i+1}').data == ans for i, (_, _, ans) in enumerate(q_list))
+        db.session.add(Score(user_id=current_user.id, category=category, score=score,
+                             date=datetime.now(timezone.utc)))
         db.session.commit()
         flash(f'You scored {score}/{len(q_list)}!', 'success')
         return redirect(url_for('profile'))
 
-    return render_template(
-        'exam.html',
-        form=form,
-        category=category,
-        num_questions=len(q_list),
-        total_time_seconds=len(q_list) * 60
-    )
+    return render_template('exam.html', form=form, category=category,
+                           num_questions=len(q_list), total_time_seconds=len(q_list) * 60)
 
+# ---------------------- Admin Dashboard ---------------------- #
 @app.route('/admin', methods=['GET', 'POST'])
 @login_required
 def admin_dashboard():
     if current_user.role != 'admin':
         flash('Access denied: Admin privileges required.', 'danger')
         return redirect(url_for('profile'))
-
-    pending_users = []
-    approved_users = []
-    user_scores = {}
-    avg_category_data = {}
-    trend_data = {'labels': [], 'data': []}
 
     if request.method == 'POST':
         user_id = request.form.get('user_id')
@@ -392,38 +356,29 @@ def admin_dashboard():
     for score in all_scores:
         user_scores.setdefault(score.user_id, []).append(score)
 
-    category_scores = {}
-    category_counts = {}
+    category_scores, category_counts = {}, {}
     for score in all_scores:
         cat = score.category
         category_scores[cat] = category_scores.get(cat, 0) + score.score
         category_counts[cat] = category_counts.get(cat, 0) + 1
 
-    avg_category_data = {
-        cat: round(category_scores[cat] / category_counts[cat], 1)
-        for cat in category_scores if category_counts[cat] > 0
-    }
+    avg_category_data = {cat: round(category_scores[cat]/category_counts[cat], 1)
+                         for cat in category_scores if category_counts[cat] > 0}
 
-    if all_scores:
-        trend_data = {
-            'labels': [s.date.strftime('%b %d') for s in all_scores],
-            'data': [s.score for s in all_scores]
-        }
+    trend_data = {'labels': [s.date.strftime('%b %d') for s in all_scores],
+                  'data': [s.score for s in all_scores]} if all_scores else {'labels': [], 'data': []}
 
-    return render_template(
-        'admin_dashboard.html',
-        pending_users=pending_users,
-        approved_users=approved_users,
-        user_scores=user_scores,
-        avg_category_data=avg_category_data,
-        trend_data=trend_data
-    )
+    return render_template('admin_dashboard.html',
+                           pending_users=pending_users,
+                           approved_users=approved_users,
+                           user_scores=user_scores,
+                           avg_category_data=avg_category_data,
+                           trend_data=trend_data)
 
+# ---------------------- Leaderboard ---------------------- #
 @app.route('/leaderboard')
 def leaderboard():
-    # Default sort
     sort = request.args.get('sort', 'average_desc')
-
     students_with_scores = (
         db.session.query(User.id, User.username, User.email, User.profile_pic)
         .outerjoin(Score, User.id == Score.user_id)
@@ -434,22 +389,14 @@ def leaderboard():
     )
 
     current_date = datetime.now().strftime("%B %d, %Y")
-
     if not students_with_scores:
-        return render_template(
-            'leaderboard.html',
-            top_performers=[],
-            total_students=0,
-            all_avg=0,
-            current_date=current_date,
-            current_sort=sort
-        )
+        return render_template('leaderboard.html', top_performers=[], total_students=0,
+                               all_avg=0, current_date=current_date, current_sort=sort)
 
     student_ids = [s.id for s in students_with_scores]
     all_scores = Score.query.filter(Score.user_id.in_(student_ids)).order_by(Score.user_id, Score.date).all()
 
-    leaderboard_data = []
-    student_scores = {sid: [] for sid in student_ids}
+    leaderboard_data, student_scores = [], {sid: [] for sid in student_ids}
     for score in all_scores:
         student_scores[score.user_id].append(score)
 
@@ -458,32 +405,17 @@ def leaderboard():
         total_exams = len(scores)
         total_score = sum(s.score for s in scores)
         average = round(total_score / total_exams, 1) if total_exams else 0
+        leaderboard_data.append({'id': student.id, 'username': student.username, 'email': student.email,
+                                 'profile_pic': student.profile_pic, 'total_exams': total_exams,
+                                 'total_score': total_score, 'average': average})
 
-        leaderboard_data.append({
-            'id': student.id,
-            'username': student.username,
-            'email': student.email,
-            'profile_pic': student.profile_pic,
-            'total_exams': total_exams,
-            'total_score': total_score,
-            'average': average
-        })
-
-    # Backend sorting
-    if sort == 'average_desc':
-        leaderboard_data.sort(key=lambda x: (-x['average'], -x['total_exams']))
-    elif sort == 'average_asc':
-        leaderboard_data.sort(key=lambda x: (x['average'], -x['total_exams']))
-    elif sort == 'exams_desc':
-        leaderboard_data.sort(key=lambda x: (-x['total_exams'], -x['average']))
-    elif sort == 'score_desc':
-        leaderboard_data.sort(key=lambda x: (-x['total_score'], -x['average']))
-    else:
-        # Default fallback
-        leaderboard_data.sort(key=lambda x: (-x['average'], -x['total_exams']))
-        sort = 'average_desc'
-
-    # Assign ranks based on current sort
+    sort_keys = {
+        'average_desc': lambda x: (-x['average'], -x['total_exams']),
+        'average_asc': lambda x: (x['average'], -x['total_exams']),
+        'exams_desc': lambda x: (-x['total_exams'], -x['average']),
+        'score_desc': lambda x: (-x['total_score'], -x['average'])
+    }
+    leaderboard_data.sort(key=sort_keys.get(sort, sort_keys['average_desc']))
     for i, item in enumerate(leaderboard_data, 1):
         item['rank'] = i
 
@@ -491,15 +423,11 @@ def leaderboard():
     total_students = len(leaderboard_data)
     all_avg = round(sum(x['average'] for x in leaderboard_data) / total_students, 1) if total_students else 0
 
-    return render_template(
-        'leaderboard.html',
-        top_performers=top_performers,
-        total_students=total_students,
-        all_avg=all_avg,
-        current_user=current_user,
-        current_date=current_date,
-        current_sort=sort  # Pass to template for active button
-    )
+    return render_template('leaderboard.html', top_performers=top_performers,
+                           total_students=total_students, all_avg=all_avg,
+                           current_user=current_user, current_date=current_date,
+                           current_sort=sort)
 
+# ---------------------- Run ---------------------- #
 if __name__ == '__main__':
     app.run(debug=True)
