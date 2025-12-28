@@ -21,7 +21,7 @@ app.config.from_object(Config)
 def utility_processor():
     return dict(get_resized_profile_url=get_resized_profile_url)
 
-# Supabase client (using service role key for server-side operations)
+# Supabase client (service role key for server-side operations)
 supabase: Client = create_client(
     app.config['SUPABASE_URL'],
     app.config['SUPABASE_SERVICE_ROLE_KEY']
@@ -64,31 +64,52 @@ def get_performance_remark(total_score, total_exams):
     else:
         return "Keep Practicing! 💪"
 
+# Robust Supabase upload function
 def upload_to_supabase(file, user_supabase_uid):
-    if not file or file.filename == '':
+    """
+    Uploads a profile picture to Supabase Storage.
+    Returns public URL on success, None on failure.
+    """
+    if not file or not file.filename or file.filename.strip() == '':
+        print("Upload skipped: No file selected")
         return None
 
-    # Read bytes correctly
-    file.stream.seek(0)
-    file_bytes = file.read()
+    # Validate extension
+    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    if '.' not in file.filename:
+        print("Upload blocked: No file extension")
+        return None
+    ext = file.filename.rsplit('.', 1)[1].lower()
+    if ext not in allowed_extensions:
+        print(f"Upload blocked: Invalid extension '{ext}'")
+        return None
 
-    # Build storage path
-    ext = file.filename.rsplit('.', 1)[-1].lower()
+    # Construct path
     path = f"{user_supabase_uid}/profile.{ext}"
 
     try:
+        file.stream.seek(0)
+        file_bytes = file.stream.read()
+        if not file_bytes or len(file_bytes) == 0:
+            print("Upload skipped: Empty file")
+            return None
+
         supabase.storage.from_(SUPABASE_BUCKET).upload(
             path=path,
-            file=file_bytes
+            file=file_bytes,
+            file_options={
+                "content-type": file.mimetype or f"image/{ext}",
+                "upsert": True
+            }
         )
 
         public_url = f"{SUPABASE_STORAGE_BASE_URL}{path}"
+        print(f"Upload successful: {public_url}")
         return public_url
 
     except Exception as e:
-        print("Supabase upload error:", e)
+        print(f"Supabase upload error: {type(e).__name__}: {e}")
         return None
-
 
 # Profile picture resizing helper
 def get_resized_profile_url(profile_pic_url, width=None, height=None, quality=80):
@@ -400,6 +421,9 @@ def admin_dashboard():
 
 @app.route('/leaderboard')
 def leaderboard():
+    # Default sort
+    sort = request.args.get('sort', 'average_desc')
+
     students_with_scores = (
         db.session.query(User.id, User.username, User.email, User.profile_pic)
         .outerjoin(Score, User.id == Score.user_id)
@@ -417,7 +441,8 @@ def leaderboard():
             top_performers=[],
             total_students=0,
             all_avg=0,
-            current_date=current_date
+            current_date=current_date,
+            current_sort=sort
         )
 
     student_ids = [s.id for s in students_with_scores]
@@ -444,8 +469,21 @@ def leaderboard():
             'average': average
         })
 
-    leaderboard_data.sort(key=lambda x: (-x['average'], -x['total_exams']))
+    # Backend sorting
+    if sort == 'average_desc':
+        leaderboard_data.sort(key=lambda x: (-x['average'], -x['total_exams']))
+    elif sort == 'average_asc':
+        leaderboard_data.sort(key=lambda x: (x['average'], -x['total_exams']))
+    elif sort == 'exams_desc':
+        leaderboard_data.sort(key=lambda x: (-x['total_exams'], -x['average']))
+    elif sort == 'score_desc':
+        leaderboard_data.sort(key=lambda x: (-x['total_score'], -x['average']))
+    else:
+        # Default fallback
+        leaderboard_data.sort(key=lambda x: (-x['average'], -x['total_exams']))
+        sort = 'average_desc'
 
+    # Assign ranks based on current sort
     for i, item in enumerate(leaderboard_data, 1):
         item['rank'] = i
 
@@ -459,7 +497,8 @@ def leaderboard():
         total_students=total_students,
         all_avg=all_avg,
         current_user=current_user,
-        current_date=current_date
+        current_date=current_date,
+        current_sort=sort  # Pass to template for active button
     )
 
 if __name__ == '__main__':
