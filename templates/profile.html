@@ -47,20 +47,54 @@
         </div>
         {% else %}
         <div class="alert alert-info text-center mb-4">
-            You haven’t taken any exams yet. Start by selecting a category below!
+            You haven't taken any exams yet. Start by selecting a section below!
         </div>
         {% endif %}
 
-        <!-- Exam Category Selection -->
-        <div class="text-center mb-4">
-            <h5 class="mb-3">Select Exam Category</h5>
-            <form method="POST">
-                {{ form.hidden_tag() }}
-                <div class="input-group justify-content-center" style="max-width: 500px; margin: 0 auto;">
-                    {{ form.category(class="form-select") }}
-                    {{ form.submit(class="btn btn-primary btn-sm") }}
+        <!-- NEW: Section-Based Exam Selection -->
+        <div class="row mb-5">
+            {% for category, info in section_info.items() %}
+            <div class="col-lg-6 col-md-6 mb-4">
+                <div class="card h-100 border-primary shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0 fw-bold">{{ category.replace('_', ' ').title() }}</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Section 1 Button -->
+                        <div class="mb-3 p-3 bg-light rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold">📚 Section 1 (Q1-20)</span>
+                                <span class="badge bg-primary">{{ info.section1_count }} Questions</span>
+                            </div>
+                            {% if info.section1_author and info.section1_author != 'Unknown' %}
+                            <small class="text-muted d-block mb-2">by {{ info.section1_author }}</small>
+                            {% endif %}
+                            <a href="{{ url_for('exam', category=category, section='section1') }}" 
+                               class="btn btn-primary w-100">
+                                Start Section 1
+                            </a>
+                        </div>
+
+                        <!-- Section 2 Button (only if questions exist) -->
+                        {% if info.section2_count > 0 %}
+                        <div class="p-3 bg-success bg-opacity-10 rounded border-success">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-success">🎓 Section 2 (Q21-100)</span>
+                                <span class="badge bg-success">{{ info.section2_count }} Questions</span>
+                            </div>
+                            {% if info.section2_author and info.section2_author != 'Unknown' %}
+                            <small class="text-muted d-block mb-2">by {{ info.section2_author }}</small>
+                            {% endif %}
+                            <a href="{{ url_for('exam', category=category, section='section2') }}" 
+                               class="btn btn-success w-100">
+                                Start Section 2
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
-            </form>
+            </div>
+            {% endfor %}
         </div>
 
         {% if total_exams > 0 %}

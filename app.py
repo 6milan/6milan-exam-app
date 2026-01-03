@@ -11,6 +11,8 @@ from flask_wtf import FlaskForm
 from supabase import create_client, Client
 from datetime import datetime, timezone
 from sqlalchemy import func
+from questions import questions, get_section_questions, get_section_author  # Add helper functions
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -226,7 +228,7 @@ def profile():
     upload_message = handle_profile_upload()
     form = SelectCategoryForm()
     if form.validate_on_submit():
-        return redirect(url_for('exam', category=form.category.data))
+        return redirect(url_for('exam', category=form.category.data, section='section1'))  # Default to section1
 
     scores = Score.query.filter_by(user_id=current_user.id).order_by(Score.date).all()
     total_exams = len(scores)
@@ -248,6 +250,25 @@ def profile():
     avg_category_data = {cat: round(category_scores[cat] / category_counts[cat], 1)
                          for cat in category_scores if category_counts[cat] > 0}
 
+    # NEW: Section information for displaying available exams
+    section_info = {}
+    from questions import questions  # Ensure access to questions
+    for category in questions.keys():
+        if isinstance(questions[category], dict):  # New format with sections
+            section_info[category] = {
+                'section1_count': len(questions[category].get('section1', [])),
+                'section2_count': len(questions[category].get('section2', [])),
+                'section1_author': questions[category].get('section1_author', 'Unknown'),
+                'section2_author': questions[category].get('section2_author', 'Unknown')
+            }
+        else:  # Old format (backward compatibility)
+            section_info[category] = {
+                'section1_count': len(questions[category]),
+                'section2_count': 0,
+                'section1_author': 'Legacy',
+                'section2_author': None
+            }
+
     return render_template(
         'profile.html',
         form=form,
@@ -256,8 +277,10 @@ def profile():
         total_score=total_score,
         total_exams=total_exams,
         remark=remark,
-        avg_category_data=avg_category_data
+        avg_category_data=avg_category_data,
+        section_info=section_info  # NEW: Pass section info to template
     )
+
 
 # ---------------------- Student Profile Update ---------------------- #
 @app.route('/student_profile', methods=['GET', 'POST'])
@@ -293,29 +316,56 @@ def admin_profile():
     return render_template('admin_profile.html', upload_message=upload_message)
 
 # ---------------------- Exam Route ---------------------- #
-@app.route('/exam/<category>', methods=['GET', 'POST'])
+@app.route('/exam/<category>/<section>', methods=['GET', 'POST'])  # CHANGED: Added <section>
 @login_required
-def exam(category):
+def exam(category, section='section1'):  # NEW: Default to section1
     if current_user.role != 'student' or category not in questions:
         flash('Invalid category or access denied.', 'danger')
         return redirect(url_for('profile'))
 
-    q_list = questions[category]
+    # NEW: Validate section
+    if section not in ['section1', 'section2']:
+        flash('Invalid section selected.', 'danger')
+        return redirect(url_for('profile'))
+
+    # NEW: Get questions for specific section (using helper function)
+    from questions import get_section_questions, get_section_author
+    q_list = get_section_questions(category, section)
+    
+    if not q_list:
+        flash(f'No questions available for {category} - {section}', 'warning')
+        return redirect(url_for('profile'))
+
+    # Dynamic form generation for this specific section
     fields = {f'q{i+1}': RadioField(q, choices=opts, validators=[DataRequired()]) 
               for i, (q, opts, _) in enumerate(q_list)}
-    ExamForm = type('ExamForm', (FlaskForm,), {**fields, 'submit': SubmitField('Submit Exam')})
+    ExamForm = type(f'{category}_{section}_ExamForm', (FlaskForm,), {**fields, 'submit': SubmitField('Submit Exam')})
     form = ExamForm()
 
     if form.validate_on_submit():
         score = sum(getattr(form, f'q{i+1}').data == ans for i, (_, _, ans) in enumerate(q_list))
-        db.session.add(Score(user_id=current_user.id, category=category, score=score,
+        full_category = f"{category}_{section}"  # NEW: Track section in category name
+        db.session.add(Score(user_id=current_user.id, category=full_category, score=score,
                              date=datetime.now(timezone.utc)))
         db.session.commit()
-        flash(f'You scored {score}/{len(q_list)}!', 'success')
+        flash(f'You scored {score}/{len(q_list)} in {category} {section}!', 'success')
         return redirect(url_for('profile'))
 
-    return render_template('exam.html', form=form, category=category,
-                           num_questions=len(q_list), total_time_seconds=len(q_list) * 60)
+    # NEW: Get section author info
+    section_author = get_section_author(category, section) or "Unknown Author"
+    
+    # Backward compatibility for old question format
+    display_title = f"{category.replace('_', ' ').title()} - {section.replace('section', 'Section ')}"
+    
+    return render_template('exam.html', 
+                         form=form, 
+                         category=category,
+                         section=section,  # NEW
+                         display_title=display_title,  # NEW
+                         section_author=section_author,  # NEW
+                         num_questions=len(q_list), 
+                         total_time_seconds=len(q_list) * 60)
+
 
 # ---------------------- Admin Dashboard ---------------------- #
 @app.route('/admin', methods=['GET', 'POST'])
